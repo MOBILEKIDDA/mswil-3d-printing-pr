@@ -5,38 +5,14 @@
 <title>MSWIL – 3D Printed Parts Ordering</title>
 
 <style>
-body {
-  font-family: Arial, sans-serif;
-  padding: 24px;
-}
-.header {
-  display: flex;
-  align-items: center;
-  gap: 20px;
-}
-.header img {
-  height: 60px;
-}
-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-top: 15px;
-}
-th, td {
-  border: 1px solid #777;
-  padding: 8px;
-  text-align: left;
-}
-th {
-  background: #f2f2f2;
-}
-input[type="number"] {
-  width: 70px;
-}
-button {
-  padding: 6px 10px;
-  cursor: pointer;
-}
+body { font-family: Arial, sans-serif; padding: 24px; }
+.header { display: flex; align-items: center; gap: 20px; }
+.header img { height: 60px; }
+table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+th, td { border: 1px solid #777; padding: 8px; }
+th { background: #f2f2f2; }
+input[type="number"] { width: 70px; }
+button { padding: 6px 10px; cursor: pointer; }
 footer {
   margin-top: 30px;
   padding: 10px;
@@ -45,9 +21,6 @@ footer {
   font-size: 12px;
   color: #555;
 }
-.status {
-  font-weight: bold;
-}
 </style>
 </head>
 
@@ -55,7 +28,7 @@ footer {
 
 <!-- HEADER -->
 <div class="header">
-  <img src="Logo.png" alt="MSWIL Logo">
+  Logo.png
   <div>
     <h1>Motherson Wiring India Limited</h1>
     <h3>3D Printed Parts – Live Ordering & SAP PR</h3>
@@ -68,13 +41,9 @@ footer {
 ✅ Approval workflow enabled
 </p>
 
-<!-- APPROVAL SECTION -->
+<!-- APPROVAL -->
 <h3>Approval</h3>
-<label>
-  <input type="checkbox" id="approvalCheck">
-  Approval Required
-</label>
-<br><br>
+<label><input type="checkbox" id="approvalCheck"> Approval Required</label><br><br>
 
 <label>Approver:</label>
 <select id="approver">
@@ -83,20 +52,13 @@ footer {
   <option value="suresh@motherson.com|Suresh Patel">Suresh Patel</option>
 </select>
 
-<p>
-  <b>Status:</b>
-  <span id="status" class="status" style="color: gray;">Draft</span>
-</p>
+<p><b>Status:</b> <span id="status" style="color:gray">Draft</span></p>
 
-<!-- SEARCH -->
-<input
-  id="search"
-  placeholder="Search Material / Jig / Description"
-  style="padding:10px;width:450px;"
-  onkeyup="renderTable()"
-/>
+<input id="search"
+       placeholder="Search Material / Jig / Description"
+       style="padding:10px;width:450px;"
+       onkeyup="renderTable()">
 
-<!-- TABLE -->
 <table>
 <thead>
 <tr>
@@ -110,16 +72,12 @@ footer {
 </tr>
 </thead>
 <tbody id="rows">
-<tr>
-  <td colspan="7">Loading data…</td>
-</tr>
+<tr><td colspan="7">Loading data…</td></tr>
 </tbody>
 </table>
 
 <br>
-<button onclick="exportSAPPR()">
-  ✅ Export SAP PR & Send for Approval
-</button>
+<button onclick="exportSAPPR()">✅ Export SAP PR & Send for Approval</button>
 
 <footer>
 © <span id="year"></span> credit: this Software Developed by Laxman Gutte in Java Platform
@@ -136,58 +94,53 @@ let products = [];
 let cart = [];
 let currentPR = "";
 
+/* ================= UTIL ================= */
+function normalize(obj) {
+  const n = {};
+  Object.keys(obj).forEach(k => {
+    n[k.toLowerCase().replace(/\s+/g, "")] = obj[k];
+  });
+  return n;
+}
+
 /* ================= LOAD LIVE DATA ================= */
 fetch(`https://opensheet.elk.sh/${SHEET_ID}/${SHEET_NAME}`)
-  .then(res => res.json())
+  .then(r => r.json())
   .then(data => {
-    products = data.map(r => ({
-      material:
-        r["Material"] ||
-        r["Material No"] ||
-        r["Part Code"] ||
-        "",
-      jig:
-        r["JigCode"] ||
-        r["Jig Code"] ||
-        r["JIG"] ||
-        "",
-      desc:
-        r["Description"] ||
-        r["Part Description"] ||
-        "",
-      price: Number(
-        r["UnitPrice"] ||
-        r["Unit Price"] ||
-        r["Price"] ||
-        r["Fixed Price"] ||
-        0
-      )
-    })).filter(p => p.material && p.desc);
+    products = data.map(r => {
+      const x = normalize(r);
+      return {
+        material: x.material || x.materialno || x.partcode || "",
+        jig: x.jigcode || x.jig || "",
+        desc: x.description || x.partdescription || "",
+        price: Number(x.unitprice || x.price || x.fixedprice || 0)
+      };
+    }).filter(p => p.material && p.desc && p.price > 0);
 
     renderTable();
   })
-  .catch(() => {
+  .catch(err => {
     rows.innerHTML =
-      "<tr><td colspan='7'>Error loading data from Google Sheet</td></tr>";
+      "<tr><td colspan='7'>Failed to load data from Google Sheet</td></tr>";
+    console.error(err);
   });
 
 /* ================= HELPERS ================= */
 function generatePR() {
   const d = new Date();
-  return `MSWIL-PR-${d.getFullYear()}${d.getMonth()+1}${d.getDate()}-${Math.floor(1000 + Math.random() * 9000)}`;
+  return `MSWIL-PR-${d.getFullYear()}${d.getMonth()+1}${d.getDate()}-${Math.floor(1000+Math.random()*9000)}`;
 }
 
-function setStatus(text, color) {
-  status.innerText = text;
+function setStatus(txt, color) {
+  status.innerText = txt;
   status.style.color = color;
 }
 
-/* ================= RENDER TABLE ================= */
+/* ================= RENDER ================= */
 function renderTable() {
   const q = search.value.toLowerCase();
   rows.innerHTML = "";
-
-  let visible = 0;
+  let count = 0;
 
   products.forEach((p, i) => {
     if (
@@ -195,85 +148,57 @@ function renderTable() {
       p.jig.toLowerCase().includes(q) ||
       p.desc.toLowerCase().includes(q)
     ) {
-      visible++;
+      count++;
       rows.innerHTML += `
         <tr>
           <td>${p.material}</td>
           <td>${p.jig}</td>
           <td>${p.desc}</td>
           <td>${p.price}</td>
-          <td>
-            <input type="number" id="qty${i}" value="1" min="1"
-                   onchange="recalc(${i})">
-          </td>
+          <td><input type="number" id="qty${i}" value="1" min="1"
+                     onchange="recalc(${i})"></td>
           <td id="total${i}">${p.price}</td>
-          <td>
-            <button onclick="addToCart(${i})">Add</button>
-          </td>
+          <td><button onclick="addToCart(${i})">Add</button></td>
         </tr>
       `;
     }
   });
 
-  if (visible === 0) {
-    rows.innerHTML =
-      "<tr><td colspan='7'>No matching parts found</td></tr>";
+  if (count === 0) {
+    rows.innerHTML = "<tr><td colspan='7'>No matching parts found</td></tr>";
   }
 }
 
 function recalc(i) {
-  const qty = Number(document.getElementById("qty" + i).value || 0);
-  document.getElementById("total" + i).innerText =
-    qty * products[i].price;
+  document.getElementById("total"+i).innerText =
+    document.getElementById("qty"+i).value * products[i].price;
 }
 
 function addToCart(i) {
-  const qty = Number(document.getElementById("qty" + i).value || 0);
-  if (qty <= 0) {
-    alert("Quantity must be greater than 0");
-    return;
-  }
-  cart.push({
-    ...products[i],
-    qty: qty,
-    total: qty * products[i].price
-  });
-  alert("Part added to cart ✅");
+  const qty = Number(document.getElementById("qty"+i).value || 0);
+  if (qty <= 0) return alert("Quantity must be > 0");
+  cart.push({ ...products[i], qty, total: qty * products[i].price });
+  alert("Added to cart ✅");
 }
 
-/* ================= EXPORT & APPROVAL ================= */
+/* ================= EXPORT ================= */
 function exportSAPPR() {
-  if (cart.length === 0) {
-    alert("Cart is empty");
-    return;
-  }
-  if (!approvalCheck.checked) {
-    alert("Approval checkbox required");
-    return;
-  }
-  if (!approver.value) {
-    alert("Select approver");
-    return;
-  }
+  if (!cart.length) return alert("Cart is empty");
+  if (!approvalCheck.checked) return alert("Approval required");
+  if (!approver.value) return alert("Select approver");
 
   currentPR = generatePR();
   setStatus("Pending Approval", "orange");
 
-  let totalValue = 0;
+  let total = 0;
   let csv =
     "PR,Material,Description,Qty,Unit,Plant,Total,Jig\n";
 
   cart.forEach(p => {
-    totalValue += p.total;
+    total += p.total;
     csv += [
-      currentPR,
-      p.material,
-      p.desc,
-      p.qty,
-      "EA",
-      PLANT,
-      p.total,
-      p.jig
+      currentPR, p.material, p.desc, p.qty,
+      "EA", PLANT, p.total, p.jig
     ].join(",") + "\n";
   });
 
@@ -288,7 +213,7 @@ function exportSAPPR() {
 `Dear ${name},
 
 PR No: ${currentPR}
-Total Value: ₹${totalValue}
+Total Value: ₹${total}
 
 Please review and approve.
 
