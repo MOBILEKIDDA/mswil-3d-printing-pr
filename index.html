@@ -21,6 +21,7 @@ footer {
   font-size: 12px;
   color: #555;
 }
+.status { font-weight: bold; }
 </style>
 </head>
 
@@ -28,9 +29,9 @@ footer {
 
 <!-- HEADER -->
 <div class="header">
-  Logo.png
+  <img src="Logo.png" alt="MSWIL Logo">
   <div>
-    <h1>Motherson Wiring India Limited</h1>
+    <h1>Motherson Sumi Wiring India Limited</h1>
     <h3>3D Printed Parts – Live Ordering & SAP PR</h3>
   </div>
 </div>
@@ -41,24 +42,42 @@ footer {
 ✅ Approval workflow enabled
 </p>
 
-<!-- APPROVAL -->
+<!-- APPROVAL SECTION -->
 <h3>Approval</h3>
-<label><input type="checkbox" id="approvalCheck"> Approval Required</label><br><br>
+<label>
+  <input type="checkbox" id="approvalCheck">
+  Approval Required
+</label>
+<br><br>
 
 <label>Approver:</label>
 <select id="approver">
   <option value="">-- Select Approver --</option>
-  <option value="ramesh@motherson.com|Ramesh Kumar">Ramesh Kumar</option>
-  <option value="suresh@motherson.com|Suresh Patel">Suresh Patel</option>
+  <option value="rakesh.ranjan@mswil.motherson.com|Rakesh Ranjan">
+    Rakesh Ranjan
+  </option>
+  <option value="nitin.hule@mswil.motherson.com|Nitin Hule">
+    Nitin Hule
+  </option>
+  <option value="laxman.gutte@mswil.motherson.com|Laxman Gutte">
+    Manufactured by – Laxman Gutte
+  </option>
 </select>
 
-<p><b>Status:</b> <span id="status" style="color:gray">Draft</span></p>
+<p>
+  <b>Status:</b>
+  <span id="status" class="status" style="color: gray;">Draft</span>
+</p>
 
-<input id="search"
-       placeholder="Search Material / Jig / Description"
-       style="padding:10px;width:450px;"
-       onkeyup="renderTable()">
+<!-- SEARCH -->
+<input
+  id="search"
+  placeholder="Search Material / Jig / Description"
+  style="padding:10px;width:450px;"
+  onkeyup="renderTable()"
+/>
 
+<!-- PARTS TABLE -->
 <table>
 <thead>
 <tr>
@@ -77,7 +96,9 @@ footer {
 </table>
 
 <br>
-<button onclick="exportSAPPR()">✅ Export SAP PR & Send for Approval</button>
+<button onclick="exportSAPPR()">
+  ✅ Export SAP PR & Send for Approval
+</button>
 
 <footer>
 © <span id="year"></span> credit: this Software Developed by Laxman Gutte in Java Platform
@@ -86,7 +107,6 @@ footer {
 <script>
 /* ================= CONFIG ================= */
 const SHEET_ID = "1u-xsgR87QGBes0dP_dFnxvf5fivJvm8_Iv-UKy-K-6Y";
-const SHEET_NAME = "Sheet1";
 const PLANT = "P51";
 
 /* ================= STATE ================= */
@@ -95,52 +115,58 @@ let cart = [];
 let currentPR = "";
 
 /* ================= UTIL ================= */
-function normalize(obj) {
-  const n = {};
-  Object.keys(obj).forEach(k => {
-    n[k.toLowerCase().replace(/\s+/g, "")] = obj[k];
-  });
-  return n;
+function normalize(str) {
+  return String(str || "")
+    .toLowerCase()
+    .replace(/\s+/g, "")
+    .replace(/[^a-z0-9]/g, "");
 }
 
-/* ================= LOAD LIVE DATA ================= */
-fetch(`https://opensheet.elk.sh/${SHEET_ID}/${SHEET_NAME}`)
-  .then(r => r.json())
-  .then(data => {
-    products = data.map(r => {
-      const x = normalize(r);
+/* ================= LOAD DATA (GOOGLE OFFICIAL API) ================= */
+fetch(`https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json`)
+  .then(r => r.text())
+  .then(text => {
+    const json = JSON.parse(text.substring(47, text.length - 2));
+    const headers = json.table.cols.map(c => normalize(c.label));
+
+    products = json.table.rows.map(row => {
+      const obj = {};
+      headers.forEach((h, i) => {
+        obj[h] = row.c[i]?.v || "";
+      });
+
       return {
-        material: x.material || x.materialno || x.partcode || "",
-        jig: x.jigcode || x.jig || "",
-        desc: x.description || x.partdescription || "",
-        price: Number(x.unitprice || x.price || x.fixedprice || 0)
+        material: obj.material || obj.materialno || obj.partcode || "",
+        jig: obj.jigcode || obj.jig || "",
+        desc: obj.description || obj.partdescription || "",
+        price: Number(obj.unitprice || obj.price || obj.fixedprice || 0)
       };
     }).filter(p => p.material && p.desc && p.price > 0);
 
     renderTable();
   })
   .catch(err => {
-    rows.innerHTML =
-      "<tr><td colspan='7'>Failed to load data from Google Sheet</td></tr>";
     console.error(err);
+    rows.innerHTML =
+      "<tr><td colspan='7'>Error loading data from Google Sheet</td></tr>";
   });
 
 /* ================= HELPERS ================= */
 function generatePR() {
   const d = new Date();
-  return `MSWIL-PR-${d.getFullYear()}${d.getMonth()+1}${d.getDate()}-${Math.floor(1000+Math.random()*9000)}`;
+  return `MSWIL-PR-${d.getFullYear()}${d.getMonth()+1}${d.getDate()}-${Math.floor(1000 + Math.random() * 9000)}`;
 }
 
-function setStatus(txt, color) {
-  status.innerText = txt;
+function setStatus(text, color) {
+  status.innerText = text;
   status.style.color = color;
 }
 
-/* ================= RENDER ================= */
+/* ================= RENDER TABLE ================= */
 function renderTable() {
   const q = search.value.toLowerCase();
   rows.innerHTML = "";
-  let count = 0;
+  let found = false;
 
   products.forEach((p, i) => {
     if (
@@ -148,40 +174,49 @@ function renderTable() {
       p.jig.toLowerCase().includes(q) ||
       p.desc.toLowerCase().includes(q)
     ) {
-      count++;
+      found = true;
       rows.innerHTML += `
         <tr>
           <td>${p.material}</td>
           <td>${p.jig}</td>
           <td>${p.desc}</td>
           <td>${p.price}</td>
-          <td><input type="number" id="qty${i}" value="1" min="1"
-                     onchange="recalc(${i})"></td>
+          <td>
+            <input type="number" id="qty${i}" value="1" min="1"
+                   onchange="recalc(${i})">
+          </td>
           <td id="total${i}">${p.price}</td>
-          <td><button onclick="addToCart(${i})">Add</button></td>
+          <td>
+            <button onclick="addToCart(${i})">Add</button>
+          </td>
         </tr>
       `;
     }
   });
 
-  if (count === 0) {
-    rows.innerHTML = "<tr><td colspan='7'>No matching parts found</td></tr>";
+  if (!found) {
+    rows.innerHTML =
+      "<tr><td colspan='7'>No matching parts found</td></tr>";
   }
 }
 
 function recalc(i) {
-  document.getElementById("total"+i).innerText =
-    document.getElementById("qty"+i).value * products[i].price;
+  document.getElementById("total" + i).innerText =
+    document.getElementById("qty" + i).value * products[i].price;
 }
 
 function addToCart(i) {
-  const qty = Number(document.getElementById("qty"+i).value || 0);
-  if (qty <= 0) return alert("Quantity must be > 0");
-  cart.push({ ...products[i], qty, total: qty * products[i].price });
-  alert("Added to cart ✅");
+  const qty = Number(document.getElementById("qty" + i).value);
+  if (qty <= 0) return alert("Quantity must be greater than 0");
+  cart.push({
+    ...products[i],
+    qty: qty,
+    total: qty * products[i].price
+  });
+  alert("Part added to cart ✅");
 }
 
-/* ================= EXPORT ================= */
+/* ================= EXPORT & APPROVAL ================= */
 function exportSAPPR() {
   if (!cart.length) return alert("Cart is empty");
   if (!approvalCheck.checked) return alert("Approval required");
@@ -190,15 +225,21 @@ function exportSAPPR() {
   currentPR = generatePR();
   setStatus("Pending Approval", "orange");
 
-  let total = 0;
+  let totalValue = 0;
   let csv =
     "PR,Material,Description,Qty,Unit,Plant,Total,Jig\n";
 
   cart.forEach(p => {
-    total += p.total;
+    totalValue += p.total;
     csv += [
-      currentPR, p.material, p.desc, p.qty,
-      "EA", PLANT, p.total, p.jig
+      currentPR,
+      p.material,
+      p.desc,
+      p.qty,
+      "EA",
+      PLANT,
+      p.total,
+      p.jig
     ].join(",") + "\n";
   });
 
@@ -213,7 +254,7 @@ function exportSAPPR() {
 `Dear ${name},
 
 PR No: ${currentPR}
-Total Value: ₹${total}
+Total Value: ₹${totalValue}
 
 Please review and approve.
 
