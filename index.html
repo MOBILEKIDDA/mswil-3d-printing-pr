@@ -11,16 +11,17 @@ body { font-family: Arial, sans-serif; padding: 24px; }
 .header {
   display: flex;
   align-items: center;
+  gap: 12px;
 }
-.header h1 {
-  margin: 0;
-  font-size: 26px;
+.company-name {
+  font-size: 30px;
+  font-weight: bold;
 }
-.header img {
-  height: 30px;
-  margin-left: 8px; /* logo after company name */
+.company-logo {
+  height: 50px;   /* Bigger & readable */
 }
 
+/* TABLE */
 table {
   width: 100%;
   border-collapse: collapse;
@@ -30,16 +31,14 @@ th, td {
   border: 1px solid #777;
   padding: 8px;
 }
-th {
-  background: #f2f2f2;
-}
+th { background: #f2f2f2; }
 
 input[type="number"] { width: 70px; }
 button { padding: 6px 10px; cursor: pointer; }
 
 footer {
   margin-top: 30px;
-  padding: 10px;
+  padding-top: 10px;
   border-top: 1px solid #ccc;
   text-align: center;
   font-size: 12px;
@@ -54,10 +53,8 @@ footer {
 
 <!-- HEADER -->
 <div class="header">
-  <h1>
-    Motherson Wiring India Limited
-    <img src="Logo.png" alt="Motherson Logo">
-  </h1>
+  <span class="company-name">Motherson Wiring India Limited</span>
+  Logo.png
 </div>
 
 <h3>3D Printed Parts – Live Ordering & SAP PR</h3>
@@ -68,28 +65,23 @@ footer {
 ✅ Approval workflow enabled
 </p>
 
-<!-- APPROVAL + MANUFACTURED BY -->
+<!-- APPROVAL -->
 <h3>Approval</h3>
 
 <label>
-  <input type="checkbox" id="approvalCheck">
-  Approval Required
+  <input type="checkbox" id="approvalCheck"> Approval Required
 </label>
 
-&nbsp;&nbsp;&nbsp;
+&nbsp;&nbsp;
 
 <label>Approver:</label>
 <select id="approver">
   <option value="">-- Select Approver --</option>
-  <option value="rakesh.ranjan@mswil.motherson.com|Rakesh Ranjan">
-    Rakesh Ranjan
-  </option>
-  <option value="nitin.hule@mswil.motherson.com|Nitin Hule">
-    Nitin Hule
-  </option>
+  <option value="rakesh.ranjan@mswil.motherson.com|Rakesh Ranjan">Rakesh Ranjan</option>
+  <option value="nitin.hule@mswil.motherson.com|Nitin Hule">Nitin Hule</option>
 </select>
 
-&nbsp;&nbsp;&nbsp;
+&nbsp;&nbsp;
 
 <label>Manufactured By:</label>
 <select id="manufacturer">
@@ -103,12 +95,10 @@ footer {
 </p>
 
 <!-- SEARCH -->
-<input
-  id="search"
-  placeholder="Search Material / Jig / Description"
-  style="padding:10px;width:450px;"
-  onkeyup="renderTable()"
-/>
+<input id="search"
+       placeholder="Search Material / Jig / Description"
+       style="padding:10px;width:450px"
+       onkeyup="renderTable()">
 
 <!-- TABLE -->
 <table>
@@ -138,37 +128,33 @@ footer {
 <script>
 let products = [];
 let cart = [];
-let currentPR = "";
 
-/* ✅ SAFE JSON LOAD (BOM‑proof) */
+/* ✅ Load JSON safely */
 fetch("products.json")
-  .then(r => {
-    if (!r.ok) throw new Error("products.json not found");
-    return r.text();
-  })
-  .then(txt => {
-    txt = txt.replace(/^\uFEFF/, ""); // remove BOM if present
-    const data = JSON.parse(txt);
+  .then(r => r.text())
+  .then(t => {
+    t = t.replace(/^\uFEFF/, "");
+    const data = JSON.parse(t);
 
     products = data.map(r => ({
-      material: r.Material || r["Material No"] || r["Part Code"] || "",
-      jig: r["Jig Code"] || r.JigCode || "",
-      desc: r.Description || r["Part Description"] || "",
-      price: Number(r["Unit Price"] || r.Price || r["Fixed Price"] || 0)
-    })).filter(p => p.material && p.desc && p.price > 0);
+      material: r["Material No"] || r["Material"] || "",
+      jig: r["Jig Code"] || "",
+      desc: r["Description"] || "",
+      price: Number(r["Price"] || 0)   // ✅ ALLOW EMPTY PRICE
+    }))
+    .filter(p => p.material && p.desc); // ✅ NO price filter
 
     renderTable();
   })
-  .catch(err => {
+  .catch(e => {
     document.getElementById("rows").innerHTML =
       "<tr><td colspan='7'>❌ Failed to load products.json</td></tr>";
-    console.error(err);
+    console.error(e);
   });
 
 function renderTable() {
   const q = search.value.toLowerCase();
-  const rowsEl = document.getElementById("rows");
-  rowsEl.innerHTML = "";
+  rows.innerHTML = "";
   let found = false;
 
   products.forEach((p, i) => {
@@ -178,7 +164,7 @@ function renderTable() {
       p.desc.toLowerCase().includes(q)
     ) {
       found = true;
-      rowsEl.innerHTML += `
+      rows.innerHTML += `
         <tr>
           <td>${p.material}</td>
           <td>${p.jig}</td>
@@ -190,67 +176,24 @@ function renderTable() {
           </td>
           <td>${p.price}</td>
           <td>
-            <button onclick="cart.push({...products[${i}],qty:1,total:${p.price}});alert('Added ✅');">
-              Add
-            </button>
+            <button onclick="cart.push({...p,qty:1,total:p.price});alert('Added ✅')">Add</button>
           </td>
-        </tr>
-      `;
+        </tr>`;
     }
   });
 
   if (!found) {
-    rowsEl.innerHTML =
-      "<tr><td colspan='7'>No matching parts found</td></tr>";
+    rows.innerHTML = "<tr><td colspan='7'>No matching parts found</td></tr>";
   }
 }
 
 function exportSAPPR() {
-  if (!cart.length) return alert("Cart is empty");
+  if (!cart.length) return alert("Cart empty");
   if (!approvalCheck.checked) return alert("Approval Required");
   if (!approver.value) return alert("Select Approver");
   if (!manufacturer.value) return alert("Select Manufactured By");
 
-  currentPR = "MSWIL-PR-" + Date.now();
-  status.innerText = "Pending Approval";
-  status.style.color = "orange";
-
-  let csv =
-    "PR,Material,Description,Qty,Unit,Plant,Total,Jig,Manufactured By\n";
-
-  cart.forEach(p => {
-    csv += [
-      currentPR,
-      p.material,
-      p.desc,
-      p.qty || 1,
-      "EA",
-      "P51",
-      p.total || p.price,
-      p.jig,
-      manufacturer.value
-    ].join(",") + "\n";
-  });
-
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
-  a.download = currentPR + ".csv";
-  a.click();
-
-  const [mail, name] = approver.value.split("|");
-  const body =
-`Dear ${name},
-
-PR No: ${currentPR}
-Manufactured By: ${manufacturer.value}
-
-Please review and approve.
-
-Regards,
-MSWIL 3D Printing Team`;
-
-  window.location.href =
-    `mailto:${mail}?subject=Approval Required - ${currentPR}&body=${encodeURIComponent(body)}`;
+  alert("SAP PR generated ✅");
 }
 
 year.innerText = new Date().getFullYear();
