@@ -1,18 +1,42 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <title>MSWIL – 3D Printed Parts Ordering</title>
 
 <style>
-body { font-family: Arial; padding: 24px; }
-.header { display: flex; align-items: center; gap: 20px; }
-.header img { height: 60px; }
-table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-th, td { border: 1px solid #777; padding: 8px; }
-th { background: #f2f2f2; }
-input[type=number] { width: 70px; }
-button { padding: 6px 10px; cursor: pointer; }
+body {
+  font-family: Arial, sans-serif;
+  padding: 24px;
+}
+.header {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+.header img {
+  height: 60px;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 15px;
+}
+th, td {
+  border: 1px solid #777;
+  padding: 8px;
+  text-align: left;
+}
+th {
+  background: #f2f2f2;
+}
+input[type="number"] {
+  width: 70px;
+}
+button {
+  padding: 6px 10px;
+  cursor: pointer;
+}
 footer {
   margin-top: 30px;
   padding: 10px;
@@ -21,13 +45,17 @@ footer {
   font-size: 12px;
   color: #555;
 }
+.status {
+  font-weight: bold;
+}
 </style>
 </head>
 
 <body>
 
+<!-- HEADER -->
 <div class="header">
-  <img src="Logo.png" alt="Motherson Logo">
+  <img src="Logo.png" alt="MSWIL Logo">
   <div>
     <h1>Motherson Wiring India Limited</h1>
     <h3>3D Printed Parts – Live Ordering & SAP PR</h3>
@@ -36,13 +64,15 @@ footer {
 
 <p>
 ✅ Plant: <b>P51</b><br>
-✅ Live data from Google Sheet (auto updates)<br>
+✅ Live data from Google Sheet (auto-updates)<br>
 ✅ Approval workflow enabled
 </p>
 
+<!-- APPROVAL SECTION -->
 <h3>Approval</h3>
 <label>
-  <input type="checkbox" id="approvalCheck"> Approval Required
+  <input type="checkbox" id="approvalCheck">
+  Approval Required
 </label>
 <br><br>
 
@@ -53,11 +83,20 @@ footer {
   <option value="suresh@motherson.com|Suresh Patel">Suresh Patel</option>
 </select>
 
-<p><b>Status:</b> <span id="status" style="color:gray">Draft</span></p>
+<p>
+  <b>Status:</b>
+  <span id="status" class="status" style="color: gray;">Draft</span>
+</p>
 
-<input id="search" placeholder="Search Material / Jig / Description"
-       style="padding:10px;width:450px;" onkeyup="render()">
+<!-- SEARCH -->
+<input
+  id="search"
+  placeholder="Search Material / Jig / Description"
+  style="padding:10px;width:450px;"
+  onkeyup="renderTable()"
+/>
 
+<!-- TABLE -->
 <table>
 <thead>
 <tr>
@@ -70,76 +109,198 @@ footer {
   <th>Action</th>
 </tr>
 </thead>
-<tbody id="rows"></tbody>
+<tbody id="rows">
+<tr>
+  <td colspan="7">Loading data…</td>
+</tr>
+</tbody>
 </table>
 
 <br>
-<button onclick="exportPR()">✅ Export SAP PR & Send for Approval</button>
+<button onclick="exportSAPPR()">
+  ✅ Export SAP PR & Send for Approval
+</button>
 
 <footer>
 © <span id="year"></span> credit: this Software Developed by Laxman Gutte in Java Platform
 </footer>
 
 <script>
+/* ================= CONFIG ================= */
 const SHEET_ID = "1u-xsgR87QGBes0dP_dFnxvf5fivJvm8_Iv-UKy-K-6Y";
 const SHEET_NAME = "Sheet1";
 const PLANT = "P51";
 
+/* ================= STATE ================= */
 let products = [];
 let cart = [];
 let currentPR = "";
 
+/* ================= LOAD LIVE DATA ================= */
 fetch(`https://opensheet.elk.sh/${SHEET_ID}/${SHEET_NAME}`)
   .then(res => res.json())
   .then(data => {
     products = data.map(r => ({
-      material: r.Material,
-      jig: r.JigCode,
-      desc: r.Description,
-      price: Number(r.UnitPrice)
-    }));
-    render();
+      material:
+        r["Material"] ||
+        r["Material No"] ||
+        r["Part Code"] ||
+        "",
+      jig:
+        r["JigCode"] ||
+        r["Jig Code"] ||
+        r["JIG"] ||
+        "",
+      desc:
+        r["Description"] ||
+        r["Part Description"] ||
+        "",
+      price: Number(
+        r["UnitPrice"] ||
+        r["Unit Price"] ||
+        r["Price"] ||
+        r["Fixed Price"] ||
+        0
+      )
+    })).filter(p => p.material && p.desc);
+
+    renderTable();
+  })
+  .catch(() => {
+    rows.innerHTML =
+      "<tr><td colspan='7'>Error loading data from Google Sheet</td></tr>";
   });
 
-function generatePR(){
-  const d=new Date();
-  return `MSWIL-PR-${d.getFullYear()}${d.getMonth()+1}${d.getDate()}-${Math.floor(1000+Math.random()*9000)}`;
+/* ================= HELPERS ================= */
+function generatePR() {
+  const d = new Date();
+  return `MSWIL-PR-${d.getFullYear()}${d.getMonth()+1}${d.getDate()}-${Math.floor(1000 + Math.random() * 9000)}`;
 }
 
-function setStatus(txt,color){
-  status.innerText = txt;
+function setStatus(text, color) {
+  status.innerText = text;
   status.style.color = color;
 }
 
-function render(){
+/* ================= RENDER TABLE ================= */
+function renderTable() {
   const q = search.value.toLowerCase();
   rows.innerHTML = "";
-  products.forEach((p,i)=>{
-    if(p.material?.includes(q) || p.jig?.toLowerCase().includes(q) || p.desc?.toLowerCase().includes(q)){
+
+  let visible = 0;
+
+  products.forEach((p, i) => {
+    if (
+      p.material.toLowerCase().includes(q) ||
+      p.jig.toLowerCase().includes(q) ||
+      p.desc.toLowerCase().includes(q)
+    ) {
+      visible++;
       rows.innerHTML += `
-      <tr>
-        <td>${p.material}</td>
-        <td>${p.jig}</td>
-        <td>${p.desc}</td>
-        <td>${p.price}</td>
-        <td><input type="number" id="q${i}" value="1" min="1" onchange="calc(${i})"></td>
-        <td id="t${i}">${p.price}</td>
-        <td><button onclick="add(${i})">Add</button></td>
-      </tr>`;
+        <tr>
+          <td>${p.material}</td>
+          <td>${p.jig}</td>
+          <td>${p.desc}</td>
+          <td>${p.price}</td>
+          <td>
+            <input type="number" id="qty${i}" value="1" min="1"
+                   onchange="recalc(${i})">
+          </td>
+          <td id="total${i}">${p.price}</td>
+          <td>
+            <button onclick="addToCart(${i})">Add</button>
+          </td>
+        </tr>
+      `;
     }
   });
+
+  if (visible === 0) {
+    rows.innerHTML =
+      "<tr><td colspan='7'>No matching parts found</td></tr>";
+  }
 }
 
-function calc(i){
-  document.getElementById("t"+i).innerText =
-    document.getElementById("q"+i).value * products[i].price;
+function recalc(i) {
+  const qty = Number(document.getElementById("qty" + i).value || 0);
+  document.getElementById("total" + i).innerText =
+    qty * products[i].price;
 }
 
-function add(i){
-  const qty = +document.getElementById("q"+i).value;
-  cart.push({...products[i], qty, total: qty * products[i].price});
-  alert("Part added");
+function addToCart(i) {
+  const qty = Number(document.getElementById("qty" + i).value || 0);
+  if (qty <= 0) {
+    alert("Quantity must be greater than 0");
+    return;
+  }
+  cart.push({
+    ...products[i],
+    qty: qty,
+    total: qty * products[i].price
+  });
+  alert("Part added to cart ✅");
 }
 
-function exportPR(){
-  if(cart.length===0){alert("Cart empty");return;}
+/* ================= EXPORT & APPROVAL ================= */
+function exportSAPPR() {
+  if (cart.length === 0) {
+    alert("Cart is empty");
+    return;
+  }
+  if (!approvalCheck.checked) {
+    alert("Approval checkbox required");
+    return;
+  }
+  if (!approver.value) {
+    alert("Select approver");
+    return;
+  }
+
+  currentPR = generatePR();
+  setStatus("Pending Approval", "orange");
+
+  let totalValue = 0;
+  let csv =
+    "PR,Material,Description,Qty,Unit,Plant,Total,Jig\n";
+
+  cart.forEach(p => {
+    totalValue += p.total;
+    csv += [
+      currentPR,
+      p.material,
+      p.desc,
+      p.qty,
+      "EA",
+      PLANT,
+      p.total,
+      p.jig
+    ].join(",") + "\n";
+  });
+
+  const blob = new Blob([csv], { type: "text/csv" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `SAP_PR_${currentPR}.csv`;
+  a.click();
+
+  const [mail, name] = approver.value.split("|");
+  const body =
+`Dear ${name},
+
+PR No: ${currentPR}
+Total Value: ₹${totalValue}
+
+Please review and approve.
+
+Regards,
+MSWIL 3D Printing Team`;
+
+  window.location.href =
+    `mailto:${mail}?subject=Approval Required - ${currentPR}&body=${encodeURIComponent(body)}`;
+}
+
+year.innerText = new Date().getFullYear();
+</script>
+
+</body>
+</html>
