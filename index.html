@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>MSWIL – 3D Printed Parts Ordering</title>
+
+<style>
+body { font-family: Arial; padding: 24px; }
+.header { display: flex; align-items: center; gap: 20px; }
+.header img { height: 60px; }
+table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+th, td { border: 1px solid #777; padding: 8px; }
+th { background: #f2f2f2; }
+input[type=number] { width: 70px; }
+button { padding: 6px 10px; cursor: pointer; }
+footer {
+  margin-top: 30px;
+  padding: 10px;
+  border-top: 1px solid #ccc;
+  text-align: center;
+  font-size: 12px;
+  color: #555;
+}
+</style>
+</head>
+
+<body>
+
+<div class="header">
+  <img src="Logo.png" alt="Motherson Logo">
+  <div>
+    <h1>Motherson Wiring India Limited</h1>
+    <h3>3D Printed Parts – Live Ordering & SAP PR</h3>
+  </div>
+</div>
+
+<p>
+✅ Plant: <b>P51</b><br>
+✅ Live data from Google Sheet (auto updates)<br>
+✅ Approval workflow enabled
+</p>
+
+<h3>Approval</h3>
+<label>
+  <input type="checkbox" id="approvalCheck"> Approval Required
+</label>
+<br><br>
+
+<label>Approver:</label>
+<select id="approver">
+  <option value="">-- Select Approver --</option>
+  <option value="ramesh@motherson.com|Ramesh Kumar">Ramesh Kumar</option>
+  <option value="suresh@motherson.com|Suresh Patel">Suresh Patel</option>
+</select>
+
+<p><b>Status:</b> <span id="status" style="color:gray">Draft</span></p>
+
+<input id="search" placeholder="Search Material / Jig / Description"
+       style="padding:10px;width:450px;" onkeyup="render()">
+
+<table>
+<thead>
+<tr>
+  <th>Material</th>
+  <th>Jig Code</th>
+  <th>Description</th>
+  <th>Unit ₹</th>
+  <th>Qty</th>
+  <th>Total ₹</th>
+  <th>Action</th>
+</tr>
+</thead>
+<tbody id="rows"></tbody>
+</table>
+
+<br>
+<button onclick="exportPR()">✅ Export SAP PR & Send for Approval</button>
+
+<footer>
+© <span id="year"></span> credit: this Software Developed by Laxman Gutte in Java Platform
+</footer>
+
+<script>
+const SHEET_ID = "1u-xsgR87QGBes0dP_dFnxvf5fivJvm8_Iv-UKy-K-6Y";
+const SHEET_NAME = "Sheet1";
+const PLANT = "P51";
+
+let products = [];
+let cart = [];
+let currentPR = "";
+
+fetch(`https://opensheet.elk.sh/${SHEET_ID}/${SHEET_NAME}`)
+  .then(res => res.json())
+  .then(data => {
+    products = data.map(r => ({
+      material: r.Material,
+      jig: r.JigCode,
+      desc: r.Description,
+      price: Number(r.UnitPrice)
+    }));
+    render();
+  });
+
+function generatePR(){
+  const d=new Date();
+  return `MSWIL-PR-${d.getFullYear()}${d.getMonth()+1}${d.getDate()}-${Math.floor(1000+Math.random()*9000)}`;
+}
+
+function setStatus(txt,color){
+  status.innerText = txt;
+  status.style.color = color;
+}
+
+function render(){
+  const q = search.value.toLowerCase();
+  rows.innerHTML = "";
+  products.forEach((p,i)=>{
+    if(p.material?.includes(q) || p.jig?.toLowerCase().includes(q) || p.desc?.toLowerCase().includes(q)){
+      rows.innerHTML += `
+      <tr>
+        <td>${p.material}</td>
+        <td>${p.jig}</td>
+        <td>${p.desc}</td>
+        <td>${p.price}</td>
+        <td><input type="number" id="q${i}" value="1" min="1" onchange="calc(${i})"></td>
+        <td id="t${i}">${p.price}</td>
+        <td><button onclick="add(${i})">Add</button></td>
+      </tr>`;
+    }
+  });
+}
+
+function calc(i){
+  document.getElementById("t"+i).innerText =
+    document.getElementById("q"+i).value * products[i].price;
+}
+
+function add(i){
+  const qty = +document.getElementById("q"+i).value;
+  cart.push({...products[i], qty, total: qty * products[i].price});
+  alert("Part added");
+}
+
+function exportPR(){
+  if(cart.length===0){alert("Cart empty");return;}
