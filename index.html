@@ -1,11 +1,11 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>MSWIL JSON DEBUG</title>
+<title>MSWIL JSON FINAL TEST</title>
 
 <style>
-body { font-family: Arial; padding: 20px; }
+body { font-family: Arial, sans-serif; padding: 24px; }
 
 .header {
   display: flex;
@@ -19,7 +19,7 @@ body { font-family: Arial; padding: 20px; }
 }
 
 .company-logo {
-  height: 60px;   /* BIG & CLEAR */
+  height: 60px;   /* CLEAR, BIG LOGO */
 }
 
 table {
@@ -39,11 +39,11 @@ th, td {
 
 <!-- HEADER -->
 <div class="header">
-  <span class="company-name">Motherson Wiring India Limited</span>
-  <img src="Logo.png" class="company-logo">
+  <span class="company-name">Motherson Sumi Wiring India Limited</span>
+  <img src="Logo.png" class="company-logo" alt="Motherson Logo">
 </div>
 
-<h3>JSON Load Proof Page</h3>
+<h3>JSON Load Verification Page</h3>
 
 <p id="status">Loading products.json…</p>
 
@@ -61,30 +61,29 @@ th, td {
 
 <script>
 fetch("products.json")
-  .then(r => r.text())
-  .then(t => {
-    t = t.replace(/^\uFEFF/, "");
-    const data = JSON.parse(t);
-
+  .then(res => {
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    return res.json();
+  })
+  .then(data => {
     document.getElementById("status").innerText =
       "✅ Records loaded: " + data.length;
 
     const rows = document.getElementById("rows");
 
-    data.slice(0, 20).forEach(p => {
+    data.slice(0, 20).forEach(r => {
       rows.innerHTML += `
         <tr>
-          <td>${p["Material No"]}</td>
-          <td>${p["Jig Code"]}</td>
-          <td>${p["Description"]}</td>
-          <td>${p["Price"]}</td>
-        </tr>
-      `;
+          <td>${r["Material No"]}</td>
+          <td>${r["Jig Code"]}</td>
+          <td>${r["Description"]}</td>
+          <td>${r["Price"]}</td>
+        </tr>`;
     });
   })
   .catch(err => {
     document.getElementById("status").innerText =
-      "❌ JSON LOAD ERROR";
+      "❌ Failed to load products.json";
     console.error(err);
   });
 </script>
