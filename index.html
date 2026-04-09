@@ -10,6 +10,7 @@ body{
   padding: 24px;
 }
 
+/* ===== HEADER (PERMANENT FIX) ===== */
 .header{
   display:flex;
   align-items:center;
@@ -20,13 +21,17 @@ body{
 .company-name{
   font-size:30px;
   font-weight:bold;
+  white-space:nowrap;
 }
 
 .company-logo{
   height:60px;
+  width:auto;
+  object-fit:contain;
+  display:block;
 }
 
-/* Tables */
+/* ===== TABLE ===== */
 table{
   width:100%;
   border-collapse:collapse;
@@ -46,11 +51,7 @@ input[type="number"]{
   width:70px;
 }
 
-input[type="text"]{
-  padding:6px;
-}
-
-select{
+input[type="text"], select{
   padding:6px;
 }
 
@@ -85,9 +86,10 @@ footer{
 
 <body>
 
-<!-- HEADER -->
+<!-- ===== HEADER (NO TEXT FALLBACK EVER) ===== -->
 <div class="header">
   <span class="company-name">Motherson Sumi Wiring India Limited</span>
+
   Logo.png
 </div>
 
@@ -98,7 +100,7 @@ footer{
 ✅ Dispatch Plant: <b>P51</b>
 </p>
 
-<!-- REQUEST DETAILS -->
+<!-- ===== REQUEST DETAILS ===== -->
 <h3>Request Details</h3>
 
 <label>Requester Employee ID:</label>
@@ -121,17 +123,14 @@ footer{
 <label>Manufacturing Unit:</label>
 <select id="mfgUnit">
   <option value="">-- Select --</option>
-  <option value="P51|laxman.gutte@mswil.motherson.com">
-    P51 – Laxman Gutte
-  </option>
+  <option value="P51|laxman.gutte@mswil.motherson.com">P51 – Laxman Gutte</option>
 </select>
 
-<!-- APPROVAL -->
+<!-- ===== APPROVAL ===== -->
 <h3>Approval</h3>
 
 <label>
-  <input type="checkbox" id="approvalCheck">
-  Main Approval Required
+  <input type="checkbox" id="approvalCheck"> Main Approval Required
 </label>
 
 &nbsp;&nbsp;
@@ -157,12 +156,12 @@ footer{
 <span id="status" class="status">Draft</span>
 </p>
 
-<!-- SEARCH -->
+<!-- ===== SEARCH ===== -->
 <input id="search"
   placeholder="Search Material / Jig / Description"
   style="padding:10px;width:450px">
 
-<!-- TABLE -->
+<!-- ===== TABLE ===== -->
 <table>
 <thead>
 <tr>
@@ -188,16 +187,14 @@ footer{
 </footer>
 
 <script>
-/* ---------- CONSTANTS ---------- */
 const VALID_EMP_IDS = [
   "5095","5271","S08457","S11306","S11412",
   "5052","S11868","S10694","S09643"
 ];
 
-let products = [];
-let cart = [];
+let products=[], cart=[];
 
-/* ---------- LOAD JSON ---------- */
+/* ===== LOAD JSON ===== */
 fetch("products.json")
   .then(r=>r.text())
   .then(t=>{
@@ -215,7 +212,7 @@ fetch("products.json")
     updateApprovers();
   });
 
-/* ---------- MAIN APPROVER LOGIC ---------- */
+/* ===== APPROVER RULES ===== */
 reqUnit.addEventListener("change", updateApprovers);
 
 function updateApprovers(){
@@ -239,7 +236,7 @@ function addApprover(mail,name){
   approver.appendChild(o);
 }
 
-/* ---------- SEARCH & RENDER ---------- */
+/* ===== SEARCH + TABLE ===== */
 search.addEventListener("keyup", renderTable);
 
 function renderTable(){
@@ -272,7 +269,7 @@ function renderTable(){
   });
 }
 
-/* ---------- CART ---------- */
+/* ===== CART ===== */
 function addToCart(i){
   const total=Number(document.getElementById("tot"+i).innerText);
   const qty=products[i].price>0?total/products[i].price:1;
@@ -280,7 +277,7 @@ function addToCart(i){
   alert("Item added ✅");
 }
 
-/* ---------- EXPORT PR ---------- */
+/* ===== EXPORT PR ===== */
 function exportPR(){
   if(!cart.length) return alert("Cart is empty");
   if(!approvalCheck.checked) return alert("Main approval required");
