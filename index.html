@@ -5,98 +5,172 @@
 <title>MSWIL – 3D Printed Parts Ordering</title>
 
 <style>
-body { font-family: Arial, sans-serif; padding: 24px; }
-
-/* HEADER */
-.header {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  margin-bottom: 10px;
-}
-.company-name { font-size: 30px; font-weight: bold; }
-.company-logo { height: 60px; }
-
-/* TABLE */
-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-top: 12px;
-}
-th, td {
-  border: 1px solid #777;
-  padding: 8px;
-  text-align: center;
-}
-th { background: #f2f2f2; }
-
-input[type=number] { width: 70px; }
-
-button {
-  padding: 6px 12px;
-  cursor: pointer;
-}
-button:disabled {
-  background: #ccc;
-  cursor: not-allowed;
-}
-
-.stock-low { background: #f8d7da; }
-
-footer {
-  margin-top: 30px;
-  font-size: 12px;
-  text-align: center;
-}
-
-/* CART MODAL */
-#cartModal {
-  display: none;
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.4);
-}
-#cartBox {
-  background: #fff;
-  width: 70%;
-  margin: 6% auto;
+body{
+  font-family: Arial, sans-serif;
   padding: 20px;
+  margin: 0;
+}
+
+/* ===== HEADER ===== */
+.header{
+  display:flex;
+  align-items:center;
+  gap:14px;
+  margin-bottom:10px;
+}
+.company-name{
+  font-size:28px;
+  font-weight:bold;
+  white-space:nowrap;
+}
+.company-logo{
+  height:55px;
+  width:auto;
+  object-fit:contain;
+}
+
+/* ===== FORM ROWS ===== */
+.row{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  flex-wrap:wrap;
+  margin-bottom:10px;
+}
+
+input[type=text], select{
+  padding:6px;
+}
+
+input[type=number]{
+  width:70px;
+}
+
+/* ===== STICKY SEARCH BAR ===== */
+.sticky-toolbar{
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display:flex;
+  align-items:center;
+  gap:12px;
+  padding:10px;
+  background:white;
+  border-bottom:2px solid #ccc;
+}
+
+.search-box{
+  width:450px;
+  padding:8px;
+  font-size:14px;
+}
+
+.actions{
+  margin-left:auto;
+  display:flex;
+  gap:10px;
+}
+
+button{
+  padding:6px 12px;
+  cursor:pointer;
+}
+
+button:disabled{
+  background:#ccc;
+  cursor:not-allowed;
+}
+
+/* ===== TABLE ===== */
+.table-wrapper{
+  max-height:55vh;
+  overflow-y:auto;
+}
+
+table{
+  width:100%;
+  border-collapse:collapse;
+  margin-top:5px;
+}
+th,td{
+  border:1px solid #777;
+  padding:8px;
+  text-align:center;
+}
+th{
+  background:#f2f2f2;
+}
+
+.stock-low{ background:#f8d7da; }
+
+footer{
+  margin-top:25px;
+  font-size:12px;
+  text-align:center;
+}
+
+/* ===== CART MODAL ===== */
+#cartModal{
+  display:none;
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,0.4);
+}
+#cartBox{
+  background:white;
+  width:70%;
+  margin:6% auto;
+  padding:20px;
 }
 </style>
 </head>
 
 <body>
 
-<!-- ✅ STABLE LOGO -->
+<!-- ===== HEADER ===== -->
 <div class="header">
   <span class="company-name">Motherson Sumi Wiring India Limited</span>
-  <img src="Logo.png" class="company-logo" alt="">
+  <img src="Logo.png" class="company-logo" alt=""
+       onerror="this.style.display='none'">
 </div>
 
 <h3>3D Printed Parts – Live Ordering & SAP PR</h3>
 
-<!-- REQUEST -->
+<!-- ===== REQUEST DETAILS ===== -->
 <h3>Request Details</h3>
-<label>Employee ID:</label>
-<input id="empId">
+<div class="row">
+  <label>Employee ID:</label>
+  <input id="empId">
 
-<label>Requesting Unit:</label>
-<select id="reqUnit">
-  <option value="">-- Select --</option>
-  <option>P25</option><option>P26</option><option>P51</option>
-  <option>P48</option><option>P49</option>
-</select>
+  <label>Requesting Unit:</label>
+  <select id="reqUnit">
+    <option value="">-- Select --</option>
+    <option>P25</option>
+    <option>P26</option>
+    <option>P51</option>
+    <option>P48</option>
+    <option>P49</option>
+  </select>
 
-<!-- APPROVAL -->
+  <label>Manufacturing Unit:</label>
+  <select id="mfgUnit">
+    <option value="">-- Select --</option>
+    <option value="P51|laxman.gutte@mswil.motherson.com">
+      P51 – Laxman Gutte
+    </option>
+  </select>
+</div>
+
+<!-- ===== APPROVAL ===== -->
 <h3>Approval</h3>
-<label><input type="checkbox" id="approvalCheck"> Main Approval Required</label>
+<div class="row">
+  <label><input type="checkbox" id="approvalCheck"> Main Approval Required</label>
 
-<label>Main Approver:</label>
-<select id="approver">
-  <option value="">-- Select --</option>
-</select>
+  <label>Main Approver:</label>
+  <select id="approver"></select>
+</div>
 
-<h3>P51 Approval Authority</h3>
+<h4>P51 Approval Authority (Mandatory for ALL Orders)</h4>
 <select id="p51Authority">
   <option value="">-- Select --</option>
   <option value="vijay.aggarwal@mswil.motherson.com">Vijay Aggarwal</option>
@@ -104,27 +178,42 @@ footer {
 
 <p><b>Status:</b> <span id="status">Draft</span></p>
 
-<input id="search" placeholder="Search Material / Jig">
+<!-- ===== STICKY SEARCH + ACTIONS ===== -->
+<div class="sticky-toolbar">
+  <input id="search" class="search-box"
+         placeholder="Search Material / Jig / Description">
+  <div class="actions">
+    <button onclick="showCart()">🛒 View Cart</button>
+    <button id="exportBtn" onclick="exportPR()" disabled>
+      ✅ Export SAP PR
+    </button>
+  </div>
+</div>
 
+<!-- ===== TABLE ===== -->
+<div class="table-wrapper">
 <table>
 <thead>
 <tr>
-  <th>Material</th><th>Jig</th><th>Description</th>
-  <th>Unit ₹</th><th>Stock</th>
-  <th>Qty</th><th>Total ₹</th><th>Action</th>
+  <th>Material</th>
+  <th>Jig</th>
+  <th>Description</th>
+  <th>Unit ₹</th>
+  <th>Stock</th>
+  <th>Qty</th>
+  <th>Total ₹</th>
+  <th>Action</th>
 </tr>
 </thead>
 <tbody id="rows"></tbody>
 </table>
+</div>
 
-<br>
+<footer>
+© Developed by Laxman Gutte
+</footer>
 
-<button onclick="showCart()">🛒 View Cart</button>
-<button id="exportBtn" onclick="exportPR()" disabled>✅ Export SAP PR</button>
-
-<footer>© Developed by Laxman Gutte</footer>
-
-<!-- CART MODAL -->
+<!-- ===== CART MODAL ===== -->
 <div id="cartModal">
   <div id="cartBox">
     <h3>Selected Jigs</h3>
@@ -145,105 +234,117 @@ footer {
 </div>
 
 <script>
-let products = [];
-let cart = [];
+const VALID_EMP_IDS=["5095","5271","S08457","S11306","S11412","5052","S11868","S10694","S09643"]
+let products=[],cart=[]
 
 fetch("products.json")
-.then(r => r.text())
-.then(t => {
-  const raw = JSON.parse(t.replace(/^\uFEFF/, ""));
-  products = raw.map(r => {
-    const n = {};
-    Object.keys(r).forEach(k => n[k.trim()] = r[k]);
-    return {
-      material: n["Material No"],
-      jig: n["Jig Code"],
-      desc: n["Description"],
-      price: parseFloat(String(n["Price"]).replace(/[^0-9.]/g,"")) || 0,
-      stock: Number(n["Done Qty"] || 0)
-    };
-  });
-  render();
-});
+.then(r=>r.text())
+.then(t=>{
+  const raw=JSON.parse(t.replace(/^\uFEFF/,""))
+  products=raw.map(r=>{
+    const n={}
+    Object.keys(r).forEach(k=>n[k.trim()]=r[k])
+    return{
+      material:n["Material No"],
+      jig:n["Jig Code"],
+      desc:n["Description"],
+      price:parseFloat(String(n["Price"]).replace(/[^0-9.]/g,""))||0,
+      stock:Number(n["Done Qty"]||0)
+    }
+  })
+  render()
+  updateApprovers()
+})
 
-search.onkeyup = render;
+reqUnit.onchange=updateApprovers
+search.onkeyup=render
+
+function updateApprovers(){
+  approver.innerHTML=""
+  const u=reqUnit.value
+  if(["P25","P48","P49","P51"].includes(u)){
+    addApr("Rakesh Ranjan")
+    addApr("Nitin Hule")
+  }
+  if(u==="P26") addApr("Rakesh Ekhande")
+}
+function addApr(n){
+  const o=document.createElement("option")
+  o.value=n
+  o.textContent=n
+  approver.appendChild(o)
+}
 
 function render(){
-  rows.innerHTML = "";
-  const q = search.value.toLowerCase();
+  rows.innerHTML=""
+  const q=search.value.toLowerCase()
   products.forEach((p,i)=>{
-    if(!p.jig.toLowerCase().includes(q) && !p.material.includes(q)) return;
-
-    rows.innerHTML += `
-    <tr class="${p.stock<=0?'stock-low':''}">
-      <td>${p.material}</td>
-      <td>${p.jig}</td>
-      <td>${p.desc}</td>
-      <td>${p.price}</td>
-      <td>${p.stock}</td>
-      <td><input type="number" min="1" value="1" id="qty${i}" onchange="calc(${i})"></td>
-      <td id="tot${i}">${p.price}</td>
-      <td><button onclick="add(${i})">Add</button></td>
-    </tr>`;
-  });
+    if(p.material.includes(q)||p.jig.toLowerCase().includes(q)||p.desc.toLowerCase().includes(q)){
+      rows.innerHTML+=`
+      <tr class="${p.stock<=0?'stock-low':''}">
+        <td>${p.material}</td>
+        <td>${p.jig}</td>
+        <td>${p.desc}</td>
+        <td>${p.price}</td>
+        <td>${p.stock}</td>
+        <td>
+          <input type="number" min="1" value="1" id="q${i}"
+                 onchange="calc(${i})">
+        </td>
+        <td id="t${i}">${p.price.toFixed(2)}</td>
+        <td><button onclick="addToCart(${i})">Add</button></td>
+      </tr>`
+    }
+  })
 }
 
 function calc(i){
-  const q = Number(document.getElementById("qty"+i).value);
-  document.getElementById("tot"+i).innerText = (q * products[i].price).toFixed(2);
+  const qty=Number(document.getElementById("q"+i).value)
+  document.getElementById("t"+i).innerText=
+    (qty*products[i].price).toFixed(2)
 }
 
-function add(i){
-  const qty = Number(document.getElementById("qty"+i).value);
-  const p = products[i];
-  if(qty > p.stock){
-    alert("Quantity exceeds stock");
-    return;
-  }
-  cart.push({...p, qty, total: qty*p.price});
-  exportBtn.disabled = false;
-  alert("Added to cart");
+function addToCart(i){
+  const qty=Number(document.getElementById("q"+i).value)
+  const p=products[i]
+  if(qty>p.stock) return alert("Qty exceeds stock")
+  cart.push({...p,qty,total:qty*p.price})
+  exportBtn.disabled=false
+  alert("Added to cart")
 }
 
 function showCart(){
-  cartRows.innerHTML = "";
-  if(cart.length === 0){
-    cartRows.innerHTML = `<tr><td colspan="4">Cart is empty</td></tr>`;
-  } else {
-    cart.forEach(p=>{
-      cartRows.innerHTML += `
-      <tr>
-        <td>${p.material}</td>
-        <td>${p.jig}</td>
-        <td>${p.qty}</td>
-        <td>${p.total}</td>
-      </tr>`;
-    });
+  cartRows.innerHTML=""
+  if(!cart.length){
+    cartRows.innerHTML=`<tr><td colspan="4">Cart empty</td></tr>`
   }
-  cartModal.style.display = "block";
+  cart.forEach(p=>{
+    cartRows.innerHTML+=`
+    <tr>
+      <td>${p.material}</td>
+      <td>${p.jig}</td>
+      <td>${p.qty}</td>
+      <td>${p.total}</td>
+    </tr>`
+  })
+  cartModal.style.display="block"
 }
-
-function closeCart(){
-  cartModal.style.display = "none";
-}
+function closeCart(){ cartModal.style.display="none" }
 
 function exportPR(){
-  if(!approvalCheck.checked){alert("Approval required");return;}
-  if(!approver.value){alert("Select Main Approver");return;}
-  if(!p51Authority.value){alert("Select P51 Authority");return;}
-  if(cart.length === 0){alert("Cart empty");return;}
+  if(!approvalCheck.checked) return alert("Approval required")
+  if(!p51Authority.value) return alert("Select P51 Approval Authority")
+  if(!mfgUnit.value) return alert("Select Manufacturing Unit")
+  if(!cart.length) return alert("Cart empty")
 
-  let csv = "Material,Jig,Qty,Price,Total\n";
-  cart.forEach(p=>{
-    csv += `${p.material},${p.jig},${p.qty},${p.price},${p.total}\n`;
-  });
+  let csv="Material,Jig,Qty,Total\n"
+  cart.forEach(p=>csv+=`${p.material},${p.jig},${p.qty},${p.total}\n`)
+  const a=document.createElement("a")
+  a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"}))
+  a.download="SAP_PR.csv"
+  a.click()
 
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(new Blob([csv],{type:"text/csv"}));
-  a.download = "SAP_PR.csv";
-  a.click();
-
-  alert("✅ SAP PR generated successfully");
+  alert("✅ SAP PR generated")
 }
 </script>
 
