@@ -25,11 +25,9 @@ body{
 }
 .company-logo{
   height:55px;
-  width:auto;
-  object-fit:contain;
 }
 
-/* ===== FORM ROWS ===== */
+/* ===== FORM ROW ===== */
 .row{
   display:flex;
   align-items:center;
@@ -41,10 +39,7 @@ body{
 input[type=text], select{
   padding:6px;
 }
-
-input[type=number]{
-  width:70px;
-}
+input[type=number]{ width:70px; }
 
 /* ===== STICKY SEARCH BAR ===== */
 .sticky-toolbar{
@@ -75,7 +70,6 @@ button{
   padding:6px 12px;
   cursor:pointer;
 }
-
 button:disabled{
   background:#ccc;
   cursor:not-allowed;
@@ -103,24 +97,32 @@ th{
 
 .stock-low{ background:#f8d7da; }
 
+/* ===== CART MODAL ===== */
+#cartModal, #imageModal{
+  display:none;
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,0.5);
+  z-index:50;
+}
+
+.modal-box{
+  background:white;
+  width:70%;
+  margin:5% auto;
+  padding:20px;
+}
+
+.modal-box img{
+  max-width:100%;
+  max-height:60vh;
+  border:1px solid #ccc;
+}
+
 footer{
   margin-top:25px;
   font-size:12px;
   text-align:center;
-}
-
-/* ===== CART MODAL ===== */
-#cartModal{
-  display:none;
-  position:fixed;
-  inset:0;
-  background:rgba(0,0,0,0.4);
-}
-#cartBox{
-  background:white;
-  width:70%;
-  margin:6% auto;
-  padding:20px;
 }
 </style>
 </head>
@@ -130,7 +132,7 @@ footer{
 <!-- ===== HEADER ===== -->
 <div class="header">
   <span class="company-name">Motherson Sumi Wiring India Limited</span>
-  <img src="Logo.png" class="company-logo" alt=""
+  <img src="Logo.png" class="company-logo"
        onerror="this.style.display='none'">
 </div>
 
@@ -165,7 +167,6 @@ footer{
 <h3>Approval</h3>
 <div class="row">
   <label><input type="checkbox" id="approvalCheck"> Main Approval Required</label>
-
   <label>Main Approver:</label>
   <select id="approver"></select>
 </div>
@@ -202,6 +203,7 @@ footer{
   <th>Stock</th>
   <th>Qty</th>
   <th>Total ₹</th>
+  <th>Image</th>
   <th>Action</th>
 </tr>
 </thead>
@@ -215,7 +217,7 @@ footer{
 
 <!-- ===== CART MODAL ===== -->
 <div id="cartModal">
-  <div id="cartBox">
+  <div class="modal-box">
     <h3>Selected Jigs</h3>
     <table>
       <thead>
@@ -233,51 +235,64 @@ footer{
   </div>
 </div>
 
-<script>
-const VALID_EMP_IDS=["5095","5271","S08457","S11306","S11412","5052","S11868","S10694","S09643"]
-let products=[],cart=[]
+<!-- ===== IMAGE MODAL ===== -->
+<div id="imageModal">
+  <div class="modal-box">
+    <h3 id="imgTitle"></h3>
+    <img id="jigImg" src="">
+    <p id="imgMsg" style="color:red"></p>
+    <br>
+    <button onclick="closeImage()">Close</button>
+  </div>
+</div>
 
+<script>
+let products=[], cart=[];
+
+/* LOAD DATA */
 fetch("products.json")
 .then(r=>r.text())
 .then(t=>{
-  const raw=JSON.parse(t.replace(/^\uFEFF/,""))
+  const raw=JSON.parse(t.replace(/^\uFEFF/,""));
   products=raw.map(r=>{
-    const n={}
-    Object.keys(r).forEach(k=>n[k.trim()]=r[k])
+    const n={};
+    Object.keys(r).forEach(k=>n[k.trim()]=r[k]);
     return{
       material:n["Material No"],
       jig:n["Jig Code"],
       desc:n["Description"],
       price:parseFloat(String(n["Price"]).replace(/[^0-9.]/g,""))||0,
       stock:Number(n["Done Qty"]||0)
-    }
-  })
-  render()
-  updateApprovers()
-})
+    };
+  });
+  render();
+  updateApprovers();
+});
 
-reqUnit.onchange=updateApprovers
-search.onkeyup=render
+reqUnit.onchange=updateApprovers;
+search.onkeyup=render;
 
+/* APPROVERS */
 function updateApprovers(){
-  approver.innerHTML=""
-  const u=reqUnit.value
+  approver.innerHTML="";
+  const u=reqUnit.value;
   if(["P25","P48","P49","P51"].includes(u)){
-    addApr("Rakesh Ranjan")
-    addApr("Nitin Hule")
+    addApr("Rakesh Ranjan");
+    addApr("Nitin Hule");
   }
-  if(u==="P26") addApr("Rakesh Ekhande")
+  if(u==="P26") addApr("Rakesh Ekhande");
 }
 function addApr(n){
-  const o=document.createElement("option")
-  o.value=n
-  o.textContent=n
-  approver.appendChild(o)
+  const o=document.createElement("option");
+  o.value=n;
+  o.textContent=n;
+  approver.appendChild(o);
 }
 
+/* RENDER TABLE */
 function render(){
-  rows.innerHTML=""
-  const q=search.value.toLowerCase()
+  rows.innerHTML="";
+  const q=search.value.toLowerCase();
   products.forEach((p,i)=>{
     if(p.material.includes(q)||p.jig.toLowerCase().includes(q)||p.desc.toLowerCase().includes(q)){
       rows.innerHTML+=`
@@ -287,36 +302,57 @@ function render(){
         <td>${p.desc}</td>
         <td>${p.price}</td>
         <td>${p.stock}</td>
-        <td>
-          <input type="number" min="1" value="1" id="q${i}"
-                 onchange="calc(${i})">
-        </td>
+        <td><input type="number" min="1" value="1" id="q${i}"
+            onchange="calc(${i})"></td>
         <td id="t${i}">${p.price.toFixed(2)}</td>
-        <td><button onclick="addToCart(${i})">Add</button></td>
-      </tr>`
+        <td>
+          <button onclick="viewImage('${p.jig}')">📷 View</button>
+        </td>
+        <td>
+          <button onclick="addToCart(${i})">Add</button>
+        </td>
+      </tr>`;
     }
-  })
+  });
 }
 
+/* CALC TOTAL */
 function calc(i){
-  const qty=Number(document.getElementById("q"+i).value)
-  document.getElementById("t"+i).innerText=
-    (qty*products[i].price).toFixed(2)
+  document.getElementById("t"+i).innerText =
+    (Number(document.getElementById("q"+i).value)*products[i].price).toFixed(2);
 }
 
+/* ADD TO CART */
 function addToCart(i){
-  const qty=Number(document.getElementById("q"+i).value)
-  const p=products[i]
-  if(qty>p.stock) return alert("Qty exceeds stock")
-  cart.push({...p,qty,total:qty*p.price})
-  exportBtn.disabled=false
-  alert("Added to cart")
+  const qty=Number(document.getElementById("q"+i).value);
+  const p=products[i];
+  if(qty>p.stock) return alert("Qty exceeds stock");
+  cart.push({...p,qty,total:qty*p.price});
+  exportBtn.disabled=false;
+  alert("Added to cart");
 }
 
+/* VIEW IMAGE */
+function viewImage(jig){
+  imgTitle.innerText="Jig Image : "+jig;
+  imgMsg.innerText="";
+  jigImg.src="jig-images/"+jig+".jpg";
+  jigImg.onerror=function(){
+    imgMsg.innerText="No image available for this Jig";
+    this.style.display="none";
+  }
+  jigImg.onload=function(){
+    this.style.display="block";
+  }
+  imageModal.style.display="block";
+}
+function closeImage(){ imageModal.style.display="none"; }
+
+/* CART VIEW */
 function showCart(){
-  cartRows.innerHTML=""
+  cartRows.innerHTML="";
   if(!cart.length){
-    cartRows.innerHTML=`<tr><td colspan="4">Cart empty</td></tr>`
+    cartRows.innerHTML=`<tr><td colspan="4">Cart empty</td></tr>`;
   }
   cart.forEach(p=>{
     cartRows.innerHTML+=`
@@ -325,28 +361,29 @@ function showCart(){
       <td>${p.jig}</td>
       <td>${p.qty}</td>
       <td>${p.total}</td>
-    </tr>`
-  })
-  cartModal.style.display="block"
+    </tr>`;
+  });
+  cartModal.style.display="block";
 }
-function closeCart(){ cartModal.style.display="none" }
+function closeCart(){ cartModal.style.display="none"; }
 
+/* EXPORT PR */
 function exportPR(){
-  if(!approvalCheck.checked) return alert("Approval required")
-  if(!p51Authority.value) return alert("Select P51 Approval Authority")
-  if(!mfgUnit.value) return alert("Select Manufacturing Unit")
-  if(!cart.length) return alert("Cart empty")
+  if(!approvalCheck.checked) return alert("Approval required");
+  if(!p51Authority.value) return alert("Select P51 Approval Authority");
+  if(!mfgUnit.value) return alert("Select Manufacturing Unit");
+  if(!cart.length) return alert("Cart empty");
 
-  let csv="Material,Jig,Qty,Total\n"
-  cart.forEach(p=>csv+=`${p.material},${p.jig},${p.qty},${p.total}\n`)
-  const a=document.createElement("a")
-  a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"}))
-  a.download="SAP_PR.csv"
-  a.click()
-
-  alert("✅ SAP PR generated")
+  let csv="Material,Jig,Qty,Total\n";
+  cart.forEach(p=>csv+=`${p.material},${p.jig},${p.qty},${p.total}\n`);
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"}));
+  a.download="SAP_PR.csv";
+  a.click();
+  alert("SAP PR generated");
 }
 </script>
 
 </body>
 </html>
+``
