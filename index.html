@@ -49,7 +49,6 @@ footer {
 }
 
 .status { font-weight: bold; }
-.hidden { display: none; }
 </style>
 </head>
 
@@ -93,17 +92,14 @@ footer {
   <option value="">-- Select Requesting Unit First --</option>
 </select>
 
-<!-- P51 APPROVAL AUTHORITY -->
-<div id="p51Approval" class="hidden">
-  <br><br>
-  <label>P51 Approval Authority:</label>
-  <select id="p51Authority">
-    <option value="">-- Select --</option>
-    <option value="vijay.aggarwal@mswil.motherson.com|Vijay Aggarwal">
-      Vijay Aggarwal
-    </option>
-  </select>
-</div>
+<!-- ✅ ALWAYS REQUIRED -->
+<h3>P51 Approval Authority (Mandatory)</h3>
+<select id="p51Authority">
+  <option value="">-- Select --</option>
+  <option value="vijay.aggarwal@mswil.motherson.com|Vijay Aggarwal">
+    Vijay Aggarwal
+  </option>
+</select>
 
 <h3>Store Approval</h3>
 <b>Sumit Patel</b> (sumeet.patel@motherson.com)
@@ -149,7 +145,6 @@ const VALID_EMP_IDS = [
   "5052","S11868","S10694","S09643"
 ];
 
-/* ---------------- STATE ---------------- */
 let products = [];
 let cart = [];
 
@@ -170,25 +165,18 @@ fetch("products.json")
     renderTable();
   });
 
-/* ---------------- DYNAMIC APPROVERS ---------------- */
+/* ---------------- MAIN APPROVER RULES ---------------- */
 function updateApprovers() {
-  const unit = reqUnit.value;
   approver.innerHTML = '<option value="">-- Select --</option>';
-  p51Approval.classList.add("hidden");
+  const unit = reqUnit.value;
 
-  if (["P25","P48","P49"].includes(unit)) {
+  if (["P25","P48","P49","P51"].includes(unit)) {
     addApprover("rakesh.ranjan@mswil.motherson.com","Rakesh Ranjan");
     addApprover("nitin.hule@mswil.motherson.com","Nitin Hule");
   }
 
   if (unit === "P26") {
     addApprover("rakesh.ekhande@mswil.motherson.com","Rakesh Ekhande");
-  }
-
-  if (unit === "P51") {
-    addApprover("rakesh.ranjan@mswil.motherson.com","Rakesh Ranjan");
-    addApprover("nitin.hule@mswil.motherson.com","Nitin Hule");
-    p51Approval.classList.remove("hidden");
   }
 }
 
@@ -217,10 +205,14 @@ function renderTable() {
         <td>${p.jig}</td>
         <td>${p.desc}</td>
         <td>${p.price}</td>
-        <td><input type="number" min="1" value="1"
-          onchange="document.getElementById('tot${i}').innerText=this.value*${p.price}"></td>
+        <td>
+          <input type="number" min="1" value="1"
+            onchange="document.getElementById('tot${i}').innerText=this.value*${p.price}">
+        </td>
         <td id="tot${i}">${p.price}</td>
-        <td><button ${zero ? "disabled" : ""} onclick="addToCart(${i})">Add</button></td>
+        <td>
+          <button ${zero ? "disabled" : ""} onclick="addToCart(${i})">Add</button>
+        </td>
       </tr>`;
     }
   });
@@ -244,9 +236,8 @@ function exportPR() {
   if (!reqUnit.value) return alert("Select Requesting Unit");
   if (!VALID_EMP_IDS.includes(empId.value.trim()))
     return alert("Invalid Employee ID");
-
-  if (reqUnit.value === "P51" && !p51Authority.value)
-    return alert("Select P51 Approval Authority");
+  if (!p51Authority.value)
+    return alert("P51 Approval Authority is mandatory");
 
   if (cart.some(p => p.price <= 0))
     return alert("PR blocked: Some items have zero price");
@@ -269,9 +260,11 @@ function exportPR() {
   a.download = pr + ".csv";
   a.click();
 
-  let mails = approver.value.split("|")[0] + ",sumeet.patel@motherson.com";
-  if (reqUnit.value === "P51")
-    mails += "," + p51Authority.value.split("|")[0];
+  const mails = [
+    approver.value.split("|")[0],
+    "sumeet.patel@motherson.com",
+    p51Authority.value.split("|")[0]
+  ].join(",");
 
   location.href = `mailto:${mails}?subject=Approval Required - ${pr}`;
 }
