@@ -5,86 +5,25 @@
 <title>MSWIL – 3D Printed Parts Ordering</title>
 
 <style>
-body{
-  font-family: Arial, sans-serif;
-  padding: 24px;
-}
+body{font-family:Arial,sans-serif;padding:24px}
 
-.header{
-  display:flex;
-  align-items:center;
-  gap:14px;
-  margin-bottom:10px;
-}
-
-.company-name{
-  font-size:30px;
-  font-weight:bold;
-  white-space:nowrap;
-}
-
-.company-logo{
-  height:60px;
-  width:auto;
-  object-fit:contain;
-  display:block;
-}
+/* HEADER */
+.header{display:flex;align-items:center;gap:14px;margin-bottom:10px}
+.company-name{font-size:30px;font-weight:bold;white-space:nowrap}
+.company-logo{height:60px;width:auto;object-fit:contain;display:block}
 
 /* TABLE */
-table{
-  width:100%;
-  border-collapse:collapse;
-  margin-top:15px;
-}
-
-th,td{
-  border:1px solid #777;
-  padding:8px;
-  text-align:center;
-}
-
-th{
-  background:#f2f2f2;
-}
-
-input[type="number"]{
-  width:70px;
-}
-
-input[type="text"], select{
-  padding:6px;
-}
-
-button{
-  padding:6px 10px;
-  cursor:pointer;
-}
-
-button:disabled{
-  background:#ccc;
-  cursor:not-allowed;
-}
-
-.price-zero{
-  background:#fff3cd;
-}
-
-.stock-low{
-  background:#f8d7da;
-}
-
-footer{
-  margin-top:30px;
-  padding-top:10px;
-  border-top:1px solid #ccc;
-  font-size:12px;
-  color:#555;
-  text-align:center;
-}
-
-.status{
-  font-weight:bold;
-}
+table{width:100%;border-collapse:collapse;margin-top:15px}
+th,td{border:1px solid #777;padding:8px;text-align:center}
+th{background:#f2f2f2}
+input[type="number"]{width:70px}
+input[type="text"],select{padding:6px}
+button{padding:6px 10px;cursor:pointer}
+button:disabled{background:#ccc;cursor:not-allowed}
+.price-zero{background:#fff3cd}
+.stock-low{background:#f8d7da}
+footer{margin-top:30px;padding-top:10px;border-top:1px solid #ccc;font-size:12px;color:#555;text-align:center}
+.status{font-weight:bold}
 </style>
 </head>
 
@@ -97,15 +36,10 @@ footer{
 </div>
 
 <h3>3D Printed Parts – Live Ordering & SAP PR</h3>
-
-<p>
-✅ Data Source: Local JSON (IT‑Compliant)<br>
-✅ Dispatch Plant: <b>P51</b>
-</p>
+<p>✅ Data Source: Local JSON | ✅ Dispatch Plant: <b>P51</b></p>
 
 <!-- REQUEST DETAILS -->
 <h3>Request Details</h3>
-
 <label>Requester Employee ID:</label>
 <input type="text" id="empId">
 
@@ -133,17 +67,14 @@ footer{
 
 <!-- APPROVAL -->
 <h3>Approval</h3>
-
-<label>
-  <input type="checkbox" id="approvalCheck"> Main Approval Required
-</label>
+<label><input type="checkbox" id="approvalCheck"> Main Approval Required</label>
 
 &nbsp;&nbsp;
 
 <label>Main Approver:</label>
 <select id="approver"></select>
 
-<h3>P51 Approval Authority (Mandatory for ALL Orders)</h3>
+<h3>P51 Approval Authority (Mandatory)</h3>
 <select id="p51Authority">
   <option value="">-- Select --</option>
   <option value="vijay.aggarwal@mswil.motherson.com|Vijay Aggarwal">
@@ -154,11 +85,8 @@ footer{
 <h3>Store Approval</h3>
 <b>Sumit Patel</b> (sumeet.patel@motherson.com)
 
-<p>
-<b>Status:</b> <span id="status" class="status">Draft</span>
-</p>
+<p><b>Status:</b> <span id="status" class="status">Draft</span></p>
 
-<!-- SEARCH -->
 <input id="search" placeholder="Search Material / Jig / Description"
        style="padding:10px;width:450px">
 
@@ -176,79 +104,72 @@ footer{
   <th>Action</th>
 </tr>
 </thead>
-<tbody id="rows">
-<tr><td colspan="8">Loading data…</td></tr>
-</tbody>
+<tbody id="rows"></tbody>
 </table>
 
 <br>
-<button onclick="exportPR()">✅ Export SAP PR & Send for Approval</button>
+<button onclick="exportPR()">✅ Export SAP PR</button>
 
 <footer>
-© <span id="year"></span> – Software Developed by Laxman Gutte
+© <span id="year"></span> – Developed by Laxman Gutte
 </footer>
 
 <script>
-const VALID_EMP_IDS = [
-  "5095","5271","S08457","S11306","S11412",
-  "5052","S11868","S10694","S09643"
-];
+const VALID_EMP_IDS=["5095","5271","S08457","S11306","S11412","5052","S11868","S10694","S09643"]
+let products=[],cart=[]
 
-let products=[];
-let cart=[];
-
-/* LOAD JSON */
 fetch("products.json")
-  .then(r=>r.text())
-  .then(t=>{
-    t=t.replace(/^\uFEFF/,"");
-    const data=JSON.parse(t);
+.then(r=>r.text())
+.then(t=>{
+  t=t.replace(/^\uFEFF/,"")
+  const data=JSON.parse(t)
 
-    products=data.map(r=>({
+  products=data.map(r=>{
+    const price=parseFloat(
+      String(r["Price"]||"").replace(/[^0-9.]/g,"")
+    )||0
+
+    return{
       material:r["Material No"],
       jig:r["Jig Code"],
       desc:r["Description"],
-      price:Number(r["Price"]||0),
+      price:price,
       stock:Number(r["Done Qty"]||0)
-    }));
+    }
+  })
 
-    renderTable();
-    updateApprovers();
-  });
+  renderTable()
+  updateApprovers()
+})
 
-/* APPROVERS */
-reqUnit.addEventListener("change", updateApprovers);
+reqUnit.addEventListener("change",updateApprovers)
+search.addEventListener("keyup",renderTable)
 
 function updateApprovers(){
-  approver.innerHTML='';
-  const unit=reqUnit.value;
-
-  if(["P25","P48","P49","P51"].includes(unit)){
-    addApr("rakesh.ranjan@mswil.motherson.com","Rakesh Ranjan");
-    addApr("nitin.hule@mswil.motherson.com","Nitin Hule");
+  approver.innerHTML=""
+  const u=reqUnit.value
+  if(["P25","P48","P49","P51"].includes(u)){
+    addApr("rakesh.ranjan@mswil.motherson.com","Rakesh Ranjan")
+    addApr("nitin.hule@mswil.motherson.com","Nitin Hule")
   }
-  if(unit==="P26"){
-    addApr("rakesh.ekhande@mswil.motherson.com","Rakesh Ekhande");
+  if(u==="P26"){
+    addApr("rakesh.ekhande@mswil.motherson.com","Rakesh Ekhande")
   }
 }
-function addApr(mail,name){
-  const o=document.createElement("option");
-  o.value=mail+"|"+name;
-  o.textContent=name;
-  approver.appendChild(o);
+
+function addApr(m,n){
+  const o=document.createElement("option")
+  o.value=m+"|"+n
+  o.textContent=n
+  approver.appendChild(o)
 }
 
-/* SEARCH */
-search.addEventListener("keyup", renderTable);
-
-/* RENDER TABLE */
 function renderTable(){
-  const q=search.value.toLowerCase();
-  rows.innerHTML="";
-
+  const q=search.value.toLowerCase()
+  rows.innerHTML=""
   products.forEach((p,i)=>{
     if(p.material.includes(q)||p.jig.toLowerCase().includes(q)||p.desc.toLowerCase().includes(q)){
-      const disable = p.stock<=0 || p.price<=0;
+      const disable=p.stock<=0||p.price<=0
       rows.innerHTML+=`
       <tr class="${p.stock<=0?'stock-low':''}">
         <td>${p.material}</td>
@@ -258,62 +179,39 @@ function renderTable(){
         <td>${p.stock}</td>
         <td><input type="number" min="1" value="1" id="qty${i}"></td>
         <td id="tot${i}">${p.price}</td>
-        <td>
-          <button ${disable?'disabled':''} onclick="addToCart(${i})">Add</button>
-        </td>
-      </tr>`;
+        <td><button ${disable?'disabled':''} onclick="addToCart(${i})">Add</button></td>
+      </tr>`
     }
-  });
+  })
 }
 
-/* ADD TO CART WITH STOCK CHECK */
 function addToCart(i){
-  const qty=Number(document.getElementById("qty"+i).value);
-  const p=products[i];
-
-  if(qty>p.stock){
-    alert("Ordered quantity exceeds available stock !");
-    return;
-  }
-
-  cart.push({
-    ...p,
-    qty,
-    total:qty*p.price
-  });
-  alert("Item added ✅");
+  const qty=Number(document.getElementById("qty"+i).value)
+  const p=products[i]
+  if(qty>p.stock){alert("Qty exceeds stock");return}
+  cart.push({...p,qty,total:qty*p.price})
+  alert("Item added ✅")
 }
 
-/* EXPORT PR */
 function exportPR(){
-  if(cart.length===0) return alert("Cart empty");
-  if(!approvalCheck.checked) return alert("Main approval required");
-  if(!VALID_EMP_IDS.includes(empId.value.trim())) return alert("Invalid Employee ID");
-  if(!mfgUnit.value) return alert("Manufacturing Unit required");
-  if(!p51Authority.value) return alert("P51 Approval Authority required");
+  if(!cart.length) return alert("Cart empty")
+  if(!approvalCheck.checked) return alert("Approval required")
+  if(!VALID_EMP_IDS.includes(empId.value.trim())) return alert("Invalid Employee ID")
+  if(cart.some(p=>p.qty>p.stock||p.price<=0)) return alert("Stock or Price issue")
 
-  if(cart.some(p=>p.qty>p.stock)){
-    alert("Stock changed – reorder quantities");
-    return;
-  }
-
-  status.innerText="Pending Approval";
-  status.style.color="orange";
-
-  const pr="MSWIL-PR-"+Date.now();
-  let csv="PR,Material,Jig,Description,Qty,Price,Total,Stock\n";
-
+  const pr="MSWIL-PR-"+Date.now()
+  let csv="PR,Material,Jig,Description,Qty,Price,Total,Stock\n"
   cart.forEach(p=>{
-    csv+=[pr,p.material,p.jig,p.desc,p.qty,p.price,p.total,p.stock].join(",")+"\n";
-  });
+    csv+=[pr,p.material,p.jig,p.desc,p.qty,p.price,p.total,p.stock].join(",")+"\n"
+  })
 
-  const a=document.createElement("a");
-  a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"}));
-  a.download=pr+".csv";
-  a.click();
+  const a=document.createElement("a")
+  a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"}))
+  a.download=pr+".csv"
+  a.click()
 }
 
-year.innerText=new Date().getFullYear();
+year.innerText=new Date().getFullYear()
 </script>
 
 </body>
