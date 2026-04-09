@@ -32,11 +32,12 @@ th, td {
 th { background: #f2f2f2; }
 
 input[type="number"] { width: 70px; }
-button { padding: 6px 10px; cursor: pointer; }
+input[type="text"] { padding: 6px; }
 
-.price-zero {
-  background: #fff3cd;
-}
+button { padding: 6px 10px; cursor: pointer; }
+button:disabled { background: #ccc; cursor: not-allowed; }
+
+.price-zero { background: #fff3cd; }
 
 footer {
   margin-top: 30px;
@@ -48,6 +49,7 @@ footer {
 }
 
 .status { font-weight: bold; }
+.hidden { display: none; }
 </style>
 </head>
 
@@ -56,53 +58,66 @@ footer {
 <!-- HEADER -->
 <div class="header">
   <span class="company-name">Motherson Sumi Wiring India Limited</span>
-  <img src="Logo.png" class="company-logo">
+  Logo.png
 </div>
 
 <h3>3D Printed Parts – Live Ordering & SAP PR</h3>
 
-<p>
-✅ Plant: <b>P51</b><br>
-✅ Data loaded from local JSON (IT‑compliant)<br>
-✅ Approval workflow enabled
-</p>
+<!-- REQUEST DETAILS -->
+<h3>Request Details</h3>
 
-<!-- APPROVAL ROW -->
+<label>Requester Employee ID:</label>
+<input type="text" id="empId" placeholder="Enter Employee ID">
+
+&nbsp;&nbsp;
+
+<label>Requesting Unit:</label>
+<select id="reqUnit" onchange="updateApprovers()">
+  <option value="">-- Select --</option>
+  <option>P25</option>
+  <option>P26</option>
+  <option>P51</option>
+  <option>P48</option>
+  <option>P49</option>
+</select>
+
+<!-- APPROVAL -->
 <h3>Approval</h3>
 
-<label>
-  <input type="checkbox" id="approvalCheck"> Approval Required
-</label>
+<label><input type="checkbox" id="approvalCheck"> Main Approval Required</label>
 
 &nbsp;&nbsp;
 
-<label>Approver:</label>
+<label>Main Approver:</label>
 <select id="approver">
-  <option value="">-- Select Approver --</option>
-  <option value="rakesh.ranjan@mswil.motherson.com|Rakesh Ranjan">Rakesh Ranjan</option>
-  <option value="nitin.hule@mswil.motherson.com|Nitin Hule">Nitin Hule</option>
+  <option value="">-- Select Requesting Unit First --</option>
 </select>
 
-&nbsp;&nbsp;
+<!-- P51 APPROVAL AUTHORITY -->
+<div id="p51Approval" class="hidden">
+  <br><br>
+  <label>P51 Approval Authority:</label>
+  <select id="p51Authority">
+    <option value="">-- Select --</option>
+    <option value="vijay.aggarwal@mswil.motherson.com|Vijay Aggarwal">
+      Vijay Aggarwal
+    </option>
+  </select>
+</div>
 
-<label>Manufactured By:</label>
-<select id="manufacturer">
-  <option value="">-- Select --</option>
-  <option value="P51 : Laxman Gutte">P51 : Laxman Gutte</option>
-</select>
+<h3>Store Approval</h3>
+<b>Sumit Patel</b> (sumeet.patel@motherson.com)
 
 <p>
-  <b>Status:</b>
-  <span id="status" class="status">Draft</span>
+<b>Status:</b> <span id="status" class="status">Draft</span>
 </p>
 
-<!-- SEARCH -->
 <input id="search"
        placeholder="Search Material / Jig / Description"
        style="padding:10px;width:450px"
        onkeyup="renderTable()">
 
-<!-- PARTS TABLE -->
+<!-- TABLE -->
 <table>
 <thead>
 <tr>
@@ -128,10 +143,17 @@ footer {
 </footer>
 
 <script>
+/* ---------------- CONSTANTS ---------------- */
+const VALID_EMP_IDS = [
+  "5095","5271","S08457","S11306","S11412",
+  "5052","S11868","S10694","S09643"
+];
+
+/* ---------------- STATE ---------------- */
 let products = [];
 let cart = [];
 
-/* LOAD JSON (encoding-safe) */
+/* ---------------- LOAD JSON ---------------- */
 fetch("products.json")
   .then(r => r.text())
   .then(t => {
@@ -146,16 +168,41 @@ fetch("products.json")
     })).filter(p => p.material && p.desc);
 
     renderTable();
-  })
-  .catch(err => {
-    rows.innerHTML =
-      "<tr><td colspan='7'>❌ Failed to load products.json</td></tr>";
   });
 
+/* ---------------- DYNAMIC APPROVERS ---------------- */
+function updateApprovers() {
+  const unit = reqUnit.value;
+  approver.innerHTML = '<option value="">-- Select --</option>';
+  p51Approval.classList.add("hidden");
+
+  if (["P25","P48","P49"].includes(unit)) {
+    addApprover("rakesh.ranjan@mswil.motherson.com","Rakesh Ranjan");
+    addApprover("nitin.hule@mswil.motherson.com","Nitin Hule");
+  }
+
+  if (unit === "P26") {
+    addApprover("rakesh.ekhande@mswil.motherson.com","Rakesh Ekhande");
+  }
+
+  if (unit === "P51") {
+    addApprover("rakesh.ranjan@mswil.motherson.com","Rakesh Ranjan");
+    addApprover("nitin.hule@mswil.motherson.com","Nitin Hule");
+    p51Approval.classList.remove("hidden");
+  }
+}
+
+function addApprover(mail, name) {
+  const opt = document.createElement("option");
+  opt.value = mail + "|" + name;
+  opt.textContent = name;
+  approver.appendChild(opt);
+}
+
+/* ---------------- RENDER TABLE ---------------- */
 function renderTable() {
   const q = search.value.toLowerCase();
   rows.innerHTML = "";
-  let found = false;
 
   products.forEach((p, i) => {
     if (
@@ -163,64 +210,57 @@ function renderTable() {
       p.jig.toLowerCase().includes(q) ||
       p.desc.toLowerCase().includes(q)
     ) {
-      found = true;
-      const priceClass = p.price === 0 ? "price-zero" : "";
+      const zero = p.price <= 0;
       rows.innerHTML += `
-        <tr class="${priceClass}">
-          <td>${p.material}</td>
-          <td>${p.jig}</td>
-          <td>${p.desc}</td>
-          <td>${p.price}</td>
-          <td>
-            <input type="number" min="1" value="1"
-              onchange="document.getElementById('tot${i}').innerText=this.value*${p.price}">
-          </td>
-          <td id="tot${i}">${p.price}</td>
-          <td>
-            <button onclick="addToCart(${i})">Add</button>
-          </td>
-        </tr>`;
+      <tr class="${zero ? "price-zero" : ""}">
+        <td>${p.material}</td>
+        <td>${p.jig}</td>
+        <td>${p.desc}</td>
+        <td>${p.price}</td>
+        <td><input type="number" min="1" value="1"
+          onchange="document.getElementById('tot${i}').innerText=this.value*${p.price}"></td>
+        <td id="tot${i}">${p.price}</td>
+        <td><button ${zero ? "disabled" : ""} onclick="addToCart(${i})">Add</button></td>
+      </tr>`;
     }
   });
-
-  if (!found) {
-    rows.innerHTML = "<tr><td colspan='7'>No matching parts found</td></tr>";
-  }
 }
 
+/* ---------------- CART ---------------- */
 function addToCart(i) {
-  const qty = Number(document.querySelector(`#rows tr:nth-child(${i+1}) input`).value);
+  const total = Number(document.getElementById("tot" + i).innerText);
+  const qty = products[i].price > 0 ? total / products[i].price : 1;
   const p = products[i];
 
-  cart.push({
-    ...p,
-    qty: qty,
-    total: qty * p.price
-  });
-
-  alert("Part added to cart ✅");
+  cart.push({...p, qty, total});
+  alert("Item added ✅");
 }
 
+/* ---------------- EXPORT PR ---------------- */
 function exportPR() {
   if (!cart.length) return alert("Cart is empty");
-  if (!approvalCheck.checked) return alert("Approval Required");
-  if (!approver.value) return alert("Select Approver");
-  if (!manufacturer.value) return alert("Select Manufactured By");
+  if (!approvalCheck.checked) return alert("Main approval required");
+  if (!approver.value) return alert("Select Main Approver");
+  if (!reqUnit.value) return alert("Select Requesting Unit");
+  if (!VALID_EMP_IDS.includes(empId.value.trim()))
+    return alert("Invalid Employee ID");
+
+  if (reqUnit.value === "P51" && !p51Authority.value)
+    return alert("Select P51 Approval Authority");
+
+  if (cart.some(p => p.price <= 0))
+    return alert("PR blocked: Some items have zero price");
+
+  status.innerText = "Pending Approval";
+  status.style.color = "orange";
 
   const pr = "MSWIL-PR-" + Date.now();
   let csv =
-    "PR,Material,Jig,Description,Qty,Unit Price,Total,Manufactured By\n";
+    "PR,Material,Jig,Description,Qty,Price,Total,Unit,EmpID\n";
 
   cart.forEach(p => {
     csv += [
-      pr,
-      p.material,
-      p.jig,
-      p.desc,
-      p.qty,
-      p.price,
-      p.total,
-      manufacturer.value
+      pr,p.material,p.jig,p.desc,p.qty,p.price,p.total,reqUnit.value,empId.value
     ].join(",") + "\n";
   });
 
@@ -229,9 +269,11 @@ function exportPR() {
   a.download = pr + ".csv";
   a.click();
 
-  const [mail, name] = approver.value.split("|");
-  window.location.href =
-    `mailto:${mail}?subject=Approval Required - ${pr}`;
+  let mails = approver.value.split("|")[0] + ",sumeet.patel@motherson.com";
+  if (reqUnit.value === "P51")
+    mails += "," + p51Authority.value.split("|")[0];
+
+  location.href = `mailto:${mails}?subject=Approval Required - ${pr}`;
 }
 
 year.innerText = new Date().getFullYear();
