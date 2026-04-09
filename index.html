@@ -7,19 +7,15 @@
 <style>
 body { font-family: Arial, sans-serif; padding: 24px; }
 
+/* HEADER */
 .header {
   display: flex;
   align-items: center;
-  gap: 16px;
-  margin-bottom: 12px;
+  gap: 14px;
+  margin-bottom: 10px;
 }
-.company-name {
-  font-size: 30px;
-  font-weight: bold;
-}
-.company-logo {
-  height: 60px;
-}
+.company-name { font-size: 30px; font-weight: bold; }
+.company-logo { height: 60px; }
 
 /* TABLE */
 table {
@@ -36,10 +32,16 @@ th { background: #f2f2f2; }
 
 input[type=number] { width: 70px; }
 
-button { padding: 6px 12px; cursor: pointer; }
-button:disabled { background: #ccc; cursor: not-allowed; }
+button {
+  padding: 6px 12px;
+  cursor: pointer;
+}
+button:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
 
-.stock-low { background:#f8d7da; }
+.stock-low { background: #f8d7da; }
 
 footer {
   margin-top: 30px;
@@ -49,30 +51,26 @@ footer {
 
 /* CART MODAL */
 #cartModal {
-  display:none;
-  position:fixed;
-  top:0; left:0;
-  width:100%; height:100%;
-  background:rgba(0,0,0,0.4);
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.4);
 }
 #cartBox {
-  background:#fff;
-  width:70%;
-  margin:5% auto;
-  padding:20px;
+  background: #fff;
+  width: 70%;
+  margin: 6% auto;
+  padding: 20px;
 }
 </style>
 </head>
 
 <body>
 
-<!-- ✅ PERMANENT LOGO -->
+<!-- ✅ STABLE LOGO -->
 <div class="header">
   <span class="company-name">Motherson Sumi Wiring India Limited</span>
-  <img src="Logo.png"
-       class="company-logo"
-       alt=""
-       onerror="this.style.display='none'">
+  <img src="Logo.png" class="company-logo" alt="">
 </div>
 
 <h3>3D Printed Parts – Live Ordering & SAP PR</h3>
@@ -81,7 +79,6 @@ footer {
 <h3>Request Details</h3>
 <label>Employee ID:</label>
 <input id="empId">
-&nbsp;&nbsp;
 
 <label>Requesting Unit:</label>
 <select id="reqUnit">
@@ -93,9 +90,11 @@ footer {
 <!-- APPROVAL -->
 <h3>Approval</h3>
 <label><input type="checkbox" id="approvalCheck"> Main Approval Required</label>
-&nbsp;
+
 <label>Main Approver:</label>
-<select id="approver"></select>
+<select id="approver">
+  <option value="">-- Select --</option>
+</select>
 
 <h3>P51 Approval Authority</h3>
 <select id="p51Authority">
@@ -103,15 +102,16 @@ footer {
   <option value="vijay.aggarwal@mswil.motherson.com">Vijay Aggarwal</option>
 </select>
 
-<!-- SEARCH -->
+<p><b>Status:</b> <span id="status">Draft</span></p>
+
 <input id="search" placeholder="Search Material / Jig">
 
-<!-- TABLE -->
 <table>
 <thead>
 <tr>
   <th>Material</th><th>Jig</th><th>Description</th>
-  <th>Unit ₹</th><th>Stock</th><th>Qty</th><th>Total ₹</th><th>Action</th>
+  <th>Unit ₹</th><th>Stock</th>
+  <th>Qty</th><th>Total ₹</th><th>Action</th>
 </tr>
 </thead>
 <tbody id="rows"></tbody>
@@ -130,7 +130,12 @@ footer {
     <h3>Selected Jigs</h3>
     <table>
       <thead>
-        <tr><th>Material</th><th>Jig</th><th>Qty</th><th>Total</th></tr>
+        <tr>
+          <th>Material</th>
+          <th>Jig</th>
+          <th>Qty</th>
+          <th>Total ₹</th>
+        </tr>
       </thead>
       <tbody id="cartRows"></tbody>
     </table>
@@ -140,78 +145,105 @@ footer {
 </div>
 
 <script>
-const VALID_EMP_IDS = ["5095","5271","S08457","S11306","S11412","5052","S11868","S10694","S09643"];
-let products=[], cart=[];
+let products = [];
+let cart = [];
 
 fetch("products.json")
-.then(r=>r.json())
-.then(data=>{
-  products=data.map(r=>{
-    const norm={};
-    Object.keys(r).forEach(k=>norm[k.trim()]=r[k]);
-    return{
-      material:norm["Material No"],
-      jig:norm["Jig Code"],
-      desc:norm["Description"],
-      price:parseFloat(norm["Price"])||0,
-      stock:Number(norm["Done Qty"]||0)
-    }
+.then(r => r.text())
+.then(t => {
+  const raw = JSON.parse(t.replace(/^\uFEFF/, ""));
+  products = raw.map(r => {
+    const n = {};
+    Object.keys(r).forEach(k => n[k.trim()] = r[k]);
+    return {
+      material: n["Material No"],
+      jig: n["Jig Code"],
+      desc: n["Description"],
+      price: parseFloat(String(n["Price"]).replace(/[^0-9.]/g,"")) || 0,
+      stock: Number(n["Done Qty"] || 0)
+    };
   });
   render();
 });
 
+search.onkeyup = render;
+
 function render(){
-  rows.innerHTML="";
+  rows.innerHTML = "";
+  const q = search.value.toLowerCase();
   products.forEach((p,i)=>{
-    rows.innerHTML+=`
+    if(!p.jig.toLowerCase().includes(q) && !p.material.includes(q)) return;
+
+    rows.innerHTML += `
     <tr class="${p.stock<=0?'stock-low':''}">
       <td>${p.material}</td>
       <td>${p.jig}</td>
       <td>${p.desc}</td>
       <td>${p.price}</td>
       <td>${p.stock}</td>
-      <td><input type="number" min="1" value="1" id="q${i}" onchange="calc(${i})"></td>
-      <td id="t${i}">${p.price}</td>
+      <td><input type="number" min="1" value="1" id="qty${i}" onchange="calc(${i})"></td>
+      <td id="tot${i}">${p.price}</td>
       <td><button onclick="add(${i})">Add</button></td>
     </tr>`;
   });
 }
 
 function calc(i){
-  const q=Number(document.getElementById("q"+i).value);
-  document.getElementById("t"+i).innerText=(q*products[i].price).toFixed(2);
+  const q = Number(document.getElementById("qty"+i).value);
+  document.getElementById("tot"+i).innerText = (q * products[i].price).toFixed(2);
 }
 
 function add(i){
-  const qty=Number(document.getElementById("q"+i).value);
-  const p=products[i];
-  if(qty>p.stock){ alert("Qty exceeds stock"); return;}
-  cart.push({...p, qty, total:qty*p.price});
-  document.getElementById("exportBtn").disabled=false;
+  const qty = Number(document.getElementById("qty"+i).value);
+  const p = products[i];
+  if(qty > p.stock){
+    alert("Quantity exceeds stock");
+    return;
+  }
+  cart.push({...p, qty, total: qty*p.price});
+  exportBtn.disabled = false;
   alert("Added to cart");
 }
 
 function showCart(){
-  cartRows.innerHTML="";
-  cart.forEach(p=>{
-    cartRows.innerHTML+=`
+  cartRows.innerHTML = "";
+  if(cart.length === 0){
+    cartRows.innerHTML = `<tr><td colspan="4">Cart is empty</td></tr>`;
+  } else {
+    cart.forEach(p=>{
+      cartRows.innerHTML += `
       <tr>
         <td>${p.material}</td>
         <td>${p.jig}</td>
         <td>${p.qty}</td>
         <td>${p.total}</td>
       </tr>`;
-  });
-  cartModal.style.display="block";
+    });
+  }
+  cartModal.style.display = "block";
 }
-function closeCart(){ cartModal.style.display="none"; }
+
+function closeCart(){
+  cartModal.style.display = "none";
+}
 
 function exportPR(){
   if(!approvalCheck.checked){alert("Approval required");return;}
+  if(!approver.value){alert("Select Main Approver");return;}
   if(!p51Authority.value){alert("Select P51 Authority");return;}
-  if(cart.length===0){alert("Cart empty");return;}
+  if(cart.length === 0){alert("Cart empty");return;}
 
-  alert("✅ SAP PR generated (CSV downloaded)");
+  let csv = "Material,Jig,Qty,Price,Total\n";
+  cart.forEach(p=>{
+    csv += `${p.material},${p.jig},${p.qty},${p.price},${p.total}\n`;
+  });
+
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([csv],{type:"text/csv"}));
+  a.download = "SAP_PR.csv";
+  a.click();
+
+  alert("✅ SAP PR generated successfully");
 }
 </script>
 
